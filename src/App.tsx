@@ -1,48 +1,44 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import Container from '@mui/material/Container'
-import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Select, { type SelectChangeEvent } from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Brush,
+  ResponsiveContainer,
+} from 'recharts'
 
-import { fetchRootData } from './api/dataClient'
-import { summarize, totalValueCount, type FieldStats } from './api/stats'
+import { useRootData } from './api/useRootData'
+
+const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('')
 
 function App() {
-  const [stats, setStats] = useState<FieldStats[] | null>(null)
-  const [dayCount, setDayCount] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { root, loading, error, reload } = useRootData()
+  const [day, setDay] = useState(0)
+  const [field, setField] = useState('a')
 
-  const loadData = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const root = await fetchRootData()
-      const fieldStats = summarize(root)
-      setStats(fieldStats)
-      setDayCount(root.data.reduce((sum, entry) => sum + entry.dates.length, 0))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const chartData = useMemo(() => {
+    const record = days[day]
+    if (!record) return []
+    const values = record[field as keyof typeof record] as number[]
+    return values.map((value, index) => ({ index, value }))
+  }, [days, day, field])
 
   return (
     <>
@@ -56,10 +52,42 @@ function App() {
 
       <Container sx={{ py: 4 }}>
         <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-          <Button variant="contained" onClick={loadData} disabled={loading}>
+          <Button variant="contained" onClick={reload} disabled={loading}>
             Refresh data
           </Button>
           {loading && <CircularProgress size={24} />}
+
+          <FormControl size="small" sx={{ minWidth: 100 }} disabled={days.length === 0}>
+            <InputLabel id="day-label">Day</InputLabel>
+            <Select
+              labelId="day-label"
+              label="Day"
+              value={day}
+              onChange={(e: SelectChangeEvent<number>) => setDay(Number(e.target.value))}
+            >
+              {days.map((_, index) => (
+                <MenuItem key={index} value={index}>
+                  Day {index}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 100 }} disabled={days.length === 0}>
+            <InputLabel id="field-label">Field</InputLabel>
+            <Select
+              labelId="field-label"
+              label="Field"
+              value={field}
+              onChange={(e: SelectChangeEvent) => setField(e.target.value)}
+            >
+              {FIELDS.map((f) => (
+                <MenuItem key={f} value={f}>
+                  {f}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Stack>
 
         {error && (
@@ -68,43 +96,31 @@ function App() {
           </Alert>
         )}
 
-        {stats && (
+        {chartData.length > 0 && (
           <>
             <Typography sx={{ mb: 2 }}>
-              Loaded {dayCount} day(s), {stats.length} field-day combinations,{' '}
-              {totalValueCount(stats).toLocaleString()} total values.
+              Day {day}, field "{field}" — {chartData.length.toLocaleString()} points. Drag the
+              handles on the brush below the chart to zoom into a range.
             </Typography>
 
-            <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Day</TableCell>
-                    <TableCell>Field</TableCell>
-                    <TableCell align="right">Count</TableCell>
-                    <TableCell align="right">Min</TableCell>
-                    <TableCell align="right">Max</TableCell>
-                    <TableCell align="right">Avg</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {stats.map((row) => (
-                    <TableRow key={`${row.day}-${row.field}`} hover>
-                      <TableCell>{row.day}</TableCell>
-                      <TableCell>{row.field}</TableCell>
-                      <TableCell align="right">{row.count.toLocaleString()}</TableCell>
-                      <TableCell align="right">{row.min.toFixed(3)}</TableCell>
-                      <TableCell align="right">{row.max.toFixed(3)}</TableCell>
-                      <TableCell align="right">{row.avg.toFixed(3)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <ResponsiveContainer width="100%" height={500}>
+              <LineChart data={chartData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="index" />
+                <YAxis domain={['auto', 'auto']} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#1976d2"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Brush dataKey="index" height={30} travellerWidth={8} />
+              </LineChart>
+            </ResponsiveContainer>
           </>
         )}
-
-        {!stats && !loading && !error && <Box>No data loaded.</Box>}
       </Container>
     </>
   )
