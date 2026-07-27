@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Root } from '@subhajitdas298/test-data-protos'
-import { fetchRootData } from './dataClient'
 
-export function useRootData() {
+export function useRootData(fetcher: () => Promise<Root>) {
   const [root, setRoot] = useState<Root | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -11,13 +10,13 @@ export function useRootData() {
     setLoading(true)
     setError(null)
     try {
-      setRoot(await fetchRootData())
+      setRoot(await fetcher())
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetcher])
 
   useEffect(() => {
     reload()

@@ -1,13 +1,26 @@
 # test-consume-data-protos
 
-React + TypeScript + MUI + Vite app that consumes protobuf-encoded test data
-published by [`test-publish-data-protos`](https://github.com/subhajitdas298/test-publish-data-protos),
-decoding it with the generated TypeScript symbols from
-[`@subhajitdas298/test-data-protos`](https://github.com/subhajitdas298/test-data-protos).
+React + TypeScript + MUI + Vite app that visualizes test data published by
+[`test-publish-data-protos`](https://github.com/subhajitdas298/test-publish-data-protos),
+using the generated TypeScript symbols from
+[`@subhajitdas298/test-data-protos`](https://github.com/subhajitdas298/test-data-protos)
+to decode the protobuf representation.
 
-The app fetches the `Root` protobuf message from `GET /api/data`, decodes it
-with `fromBinary(RootSchema, bytes)`, computes per-day/per-field min/max/avg/count,
-and renders it in an MUI table.
+`test-publish-data-protos` exposes a single endpoint, `GET /api/data`, that
+returns the same dataset in two representations chosen by the `Accept`
+header: raw protobuf binary (`application/x-protobuf`) or JSON
+(`application/json`). This app has a home screen with two cards, one per
+representation:
+
+- **Binary (Protobuf)** (`/binary`) — fetches the protobuf bytes and decodes
+  them with `fromBinary(RootSchema, bytes)`.
+- **JSON** (`/json`) — fetches the JSON representation and uses it directly
+  (same shape, no decoding needed).
+
+Both routes render an identical line chart (recharts) of the raw values for a
+selected day/field, with drag-to-zoom via a Brush control — the two pages
+share the same `DataVisualizer` component, `useRootData` hook, and `TopBar`;
+only the fetch function passed in differs.
 
 ## Prerequisites
 
@@ -45,6 +58,8 @@ Open http://localhost:5173.
 ## Tech stack
 
 - React 19 + TypeScript, scaffolded with Vite
+- React Router for the two routes (`/binary`, `/json`) plus the home screen
 - MUI (Material UI) for the UI
+- recharts for the zoomable line chart
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
