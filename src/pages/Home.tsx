@@ -1,4 +1,3 @@
-import Container from '@mui/material/Container'
 import Stack from '@mui/material/Stack'
 import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
@@ -6,7 +5,7 @@ import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 import { Link } from 'react-router-dom'
 
-import TopBar from '../components/TopBar'
+import Page from '../components/Page'
 
 const CARDS = [
   {
@@ -23,27 +22,23 @@ const CARDS = [
 
 export default function Home() {
   return (
-    <>
-      <TopBar title="Test Data Protos Consumer" />
+    <Page title="Test Data Protos Consumer">
+      <Typography sx={{ mb: 3 }}>Pick a data source to visualize.</Typography>
 
-      <Container sx={{ py: 4 }}>
-        <Typography sx={{ mb: 3 }}>Pick a data source to visualize.</Typography>
-
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          {CARDS.map((card) => (
-            <Card key={card.to} sx={{ flex: 1 }}>
-              <CardActionArea component={Link} to={card.to} sx={{ height: '100%', p: 1 }}>
-                <CardContent>
-                  <Typography variant="h6" component="h2" gutterBottom>
-                    {card.title}
-                  </Typography>
-                  <Typography color="text.secondary">{card.description}</Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
-          ))}
-        </Stack>
-      </Container>
-    </>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        {CARDS.map((card) => (
+          <Card key={card.to} sx={{ flex: 1 }}>
+            <CardActionArea component={Link} to={card.to} sx={{ height: '100%', p: 1 }}>
+              <CardContent>
+                <Typography variant="h6" component="h2" gutterBottom>
+                  {card.title}
+                </Typography>
+                <Typography color="text.secondary">{card.description}</Typography>
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        ))}
+      </Stack>
+    </Page>
   )
 }
