@@ -3,9 +3,16 @@ import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
+import GitHubIcon from '@mui/icons-material/GitHub'
 import { Link } from 'react-router-dom'
 
 import Page from '../components/Page'
+
+const REPO_LINKS = [
+  { href: 'https://github.com/Subhajitdas298/test-data-protos', label: 'data-protos' },
+  { href: 'https://github.com/Subhajitdas298/test-publish-data-protos', label: 'backend' },
+  { href: 'https://github.com/Subhajitdas298/test-consume-data-protos', label: 'this UI' },
+]
 
 const CARDS = [
   {
@@ -23,6 +30,23 @@ const CARDS = [
 export default function Home() {
   return (
     <Page title="Test Data Protos Consumer">
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 4 }}>
+        {REPO_LINKS.map((repo) => (
+          <Card key={repo.href} sx={{ flex: 1 }} variant="outlined">
+            <CardActionArea
+              component="a"
+              href={repo.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ display: 'flex', justifyContent: 'center', gap: 1, py: 1 }}
+            >
+              <GitHubIcon fontSize="small" />
+              <Typography variant="body2">{repo.label}</Typography>
+            </CardActionArea>
+          </Card>
+        ))}
+      </Stack>
+
       <Typography sx={{ mb: 3 }}>Pick a data source to visualize.</Typography>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
