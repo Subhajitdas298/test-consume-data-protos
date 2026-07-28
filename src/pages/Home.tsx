@@ -9,9 +9,9 @@ import { Link } from 'react-router-dom'
 import Page from '../components/Page'
 
 const REPO_LINKS = [
-  { href: 'https://github.com/Subhajitdas298/test-data-protos', label: 'data-protos' },
-  { href: 'https://github.com/Subhajitdas298/test-publish-data-protos', label: 'backend' },
-  { href: 'https://github.com/Subhajitdas298/test-consume-data-protos', label: 'this UI' },
+  { href: 'https://github.com/Subhajitdas298/test-data-protos', label: 'Proto Definitions' },
+  { href: 'https://github.com/Subhajitdas298/test-publish-data-protos', label: 'Publisher Service' },
+  { href: 'https://github.com/Subhajitdas298/test-consume-data-protos', label: 'Consumer UI (this repo)' },
 ]
 
 const CARDS = [
