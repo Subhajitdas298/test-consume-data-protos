@@ -30,7 +30,7 @@ const CARDS = [
 export default function Home() {
   return (
     <Page title="Test Data Protos Consumer">
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} sx={{ mb: 5 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={8} sx={{ mb: 8 }}>
         {REPO_LINKS.map((repo) => (
           <Card key={repo.href} sx={{ flex: 1 }} variant="outlined">
             <CardActionArea
@@ -49,7 +49,7 @@ export default function Home() {
 
       <Typography sx={{ mb: 3 }}>Pick a data source to visualize.</Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={8}>
         {CARDS.map((card) => (
           <Card key={card.to} sx={{ flex: 1 }}>
             <CardActionArea component={Link} to={card.to} sx={{ height: '100%', p: 1 }}>
