@@ -40,7 +40,11 @@ export default function TopBar({ title, showBack = false }: { title: string; sho
           sx={{ bgcolor: 'background.paper' }}
         >
           {Object.entries(BACKENDS).map(([key, { label }]) => (
-            <ToggleButton key={key} value={key} sx={{ fontWeight: 'bold', px: 3 }}>
+            <ToggleButton
+              key={key}
+              value={key}
+              sx={{ fontWeight: 'bold', px: { xs: 1.5, sm: 3 } }}
+            >
               {label}
             </ToggleButton>
           ))}

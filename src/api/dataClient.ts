@@ -1,6 +1,12 @@
 import { fromBinary } from '@bufbuild/protobuf'
 import { RootSchema, type Root } from '@subhajitdas298/test-data-protos'
 
+export interface FetchResult {
+  root: Root
+  elapsedMs: number
+  bytes: number
+}
+
 async function get(baseUrl: string, accept: string): Promise<Response> {
   const url = `${baseUrl}/api/data`
   const response = await fetch(url, { headers: { Accept: accept } })
@@ -10,13 +16,18 @@ async function get(baseUrl: string, accept: string): Promise<Response> {
   return response
 }
 
-export async function fetchRootDataProto(baseUrl: string): Promise<Root> {
+export async function fetchRootDataProto(baseUrl: string): Promise<FetchResult> {
+  const start = performance.now()
   const response = await get(baseUrl, 'application/x-protobuf')
   const buffer = await response.arrayBuffer()
-  return fromBinary(RootSchema, new Uint8Array(buffer))
+  const root = fromBinary(RootSchema, new Uint8Array(buffer))
+  return { root, elapsedMs: performance.now() - start, bytes: buffer.byteLength }
 }
 
-export async function fetchRootDataJson(baseUrl: string): Promise<Root> {
+export async function fetchRootDataJson(baseUrl: string): Promise<FetchResult> {
+  const start = performance.now()
   const response = await get(baseUrl, 'application/json')
-  return (await response.json()) as Root
+  const text = await response.text()
+  const root = JSON.parse(text) as Root
+  return { root, elapsedMs: performance.now() - start, bytes: new TextEncoder().encode(text).length }
 }

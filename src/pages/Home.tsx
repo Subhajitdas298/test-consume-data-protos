@@ -30,7 +30,7 @@ const CARDS = [
 export default function Home() {
   return (
     <Page title="Test Data Protos Consumer">
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={8} sx={{ mb: 8 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 8 }} sx={{ mb: { xs: 4, sm: 8 } }}>
         {REPO_LINKS.map((repo) => (
           <Card key={repo.href} sx={{ flex: 1 }} variant="outlined">
             <CardActionArea
@@ -47,12 +47,12 @@ export default function Home() {
         ))}
       </Stack>
 
-      <Typography sx={{ mb: 3 }}>
+      <Typography sx={{ mb: { xs: 2, sm: 3 } }}>
         Pick a representation to visualize. Use the toggle in the top bar to switch which
         backend (Spring MVC or WebFlux) it's fetched from.
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={8}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 8 }}>
         {CARDS.map((card) => (
           <Card key={card.to} sx={{ flex: 1 }}>
             <CardActionArea component={Link} to={card.to} sx={{ height: '100%', p: 1 }}>
