@@ -47,7 +47,10 @@ export default function Home() {
         ))}
       </Stack>
 
-      <Typography sx={{ mb: 3 }}>Pick a data source to visualize.</Typography>
+      <Typography sx={{ mb: 3 }}>
+        Pick a representation to visualize. Use the toggle in the top bar to switch which
+        backend (Spring MVC or WebFlux) it's fetched from.
+      </Typography>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={8}>
         {CARDS.map((card) => (
