@@ -4,13 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      // Forwards to the test-publish-data-protos service, avoiding CORS.
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-    },
-  },
+  // Relative base so the built assets resolve correctly whether served from
+  // a domain root or a GitHub Pages project path (e.g. /test-consume-data-protos/).
+  base: './',
 })

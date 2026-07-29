@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
@@ -22,6 +22,8 @@ import type { DateRecord, Root } from '@subhajitdas298/test-data-protos'
 
 import { useRootData } from '../api/useRootData'
 import Page from '../components/Page'
+import { BACKENDS } from '../context/backends'
+import { useDataSource } from '../context/useDataSource'
 
 type Field = Exclude<keyof DateRecord, '$typeName' | '$unknown'>
 
@@ -29,11 +31,15 @@ const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
 export default function DataVisualizer({
   title,
-  fetcher,
+  fetchFn,
 }: {
   title: string
-  fetcher: () => Promise<Root>
+  fetchFn: (baseUrl: string) => Promise<Root>
 }) {
+  const { backend } = useDataSource()
+  const baseUrl = BACKENDS[backend].baseUrl
+  const fetcher = useCallback(() => fetchFn(baseUrl), [fetchFn, baseUrl])
+
   const { root, loading, error, reload } = useRootData(fetcher)
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
@@ -48,6 +54,10 @@ export default function DataVisualizer({
 
   return (
     <Page title={title} showBack>
+      <Typography color="text.secondary" sx={{ mb: 2 }}>
+        Source: {BACKENDS[backend].label} ({baseUrl})
+      </Typography>
+
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 3 }}>
         <Button variant="contained" onClick={reload} disabled={loading}>
           Refresh data
