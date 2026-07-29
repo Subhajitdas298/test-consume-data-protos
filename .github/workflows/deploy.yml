@@ -1,0 +1,52 @@
+name: Build and deploy to Azure Storage
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+        env:
+          # Needed to resolve @subhajitdas298/test-data-protos from GitHub
+          # Packages, which requires authentication even for public repos.
+          GITHUB_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
+
+      - name: Build
+        run: npm run build
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload to Azure Storage static website
+        run: |
+          az storage blob upload-batch \
+            --account-name ${{ vars.AZURE_STORAGE_ACCOUNT_NAME }} \
+            --auth-mode login \
+            --destination '$web' \
+            --source dist \
+            --overwrite

@@ -62,25 +62,111 @@ npm run dev
 Open http://localhost:5173. No local backend or dev proxy needed — the app
 talks directly to the two Azure-hosted backends over the internet.
 
-## Deployment (GitHub Pages)
+## Deployment (Azure Storage static website)
 
-[`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) builds
-the app and deploys `dist/` to GitHub Pages on every push to `main` (including a
-merged PR) and via manual `workflow_dispatch`. The app uses `HashRouter` and a
-relative Vite `base` so it works correctly as a static site under a GitHub
-Pages project path (no server-side rewrites needed for client-side routing).
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) builds the app
+and uploads `dist/` to an Azure Storage static website on every push to `main`
+(including a merged PR) and via manual `workflow_dispatch`.
 
-This can't be fully wired up from this session — add this secret yourself in
-**Settings → Secrets and variables → Actions → Secrets** so the workflow can
-install `@subhajitdas298/test-data-protos` from GitHub Packages:
+It authenticates to Azure with OIDC (`azure/login`, no client secret stored in
+GitHub) — same pattern as
+[`test-publish-data-protos`](https://github.com/subhajitdas298/test-publish-data-protos)
+and
+[`test-publish-data-protos-webflux`](https://github.com/subhajitdas298/test-publish-data-protos-webflux).
+
+The app uses `HashRouter` and a relative Vite `base`, so `index.html` doubles
+as the static site's 404 document with no server-side rewrites needed —
+routing is entirely client-side after the `#`.
+
+### Azure resources you need to create once
+
+Reuses the same resource group as the two backend services (`data-protos`),
+so no new resource group or subscription is needed:
+
+```bash
+SUBSCRIPTION_ID=cfb23074-9c21-4bc5-aecb-4845d97a147e   # same subscription as the backends
+RESOURCE_GROUP=data-protos                              # shared, already exists
+LOCATION=eastus
+STORAGE_ACCOUNT_NAME=<globally-unique-name>             # e.g. dataprotosstatic1234
+
+az account set --subscription "$SUBSCRIPTION_ID"
+
+# Storage account (Standard LRS — cheapest tier with static website support)
+az storage account create \
+  --name "$STORAGE_ACCOUNT_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --location "$LOCATION" \
+  --sku Standard_LRS \
+  --kind StorageV2
+
+# Enable static website hosting. index.html doubles as the 404 document
+# since the app uses HashRouter — there's never a real 404 to serve, all
+# routing happens client-side after the hash.
+az storage blob service-properties update \
+  --account-name "$STORAGE_ACCOUNT_NAME" \
+  --static-website \
+  --index-document index.html \
+  --404-document index.html
+
+# Print the public URL once deployed
+az storage account show \
+  --name "$STORAGE_ACCOUNT_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "primaryEndpoints.web" -o tsv
+```
+
+### Azure AD app registration for GitHub OIDC
+
+```bash
+APP_ID=$(az ad app create --display-name "gh-actions-test-consume-data-protos" --query appId -o tsv)
+az ad sp create --id "$APP_ID"
+
+az ad app federated-credential create --id "$APP_ID" --parameters '{
+  "name": "github-main-branch",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:Subhajitdas298/test-consume-data-protos:ref:refs/heads/main",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+```
+
+> **Note:** if this GitHub account has the "use unique repository/owner ID in
+> the subject claim" OIDC setting enabled (as it does for the two backend
+> repos — see their READMEs), the actual subject GitHub sends is
+> `repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/main` instead of
+> the plain form above — check the workflow's `azure/login` step for an
+> `AADSTS700213` error to find the exact subject it presented, then add a
+> second federated credential matching that subject.
+
+```bash
+# Let the CI identity write to the storage account's blobs, scoped to just
+# this storage account (not the whole resource group)
+STORAGE_ID=$(az storage account show --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --query id -o tsv)
+az role assignment create --assignee "$APP_ID" --role "Storage Blob Data Contributor" --scope "$STORAGE_ID"
+```
+
+### GitHub repo configuration
+
+These can't be set via the GitHub tools available to this session (setting an
+Actions secret requires client-side encryption with the repo's public key), so
+add them yourself in the GitHub UI.
+
+**Settings → Secrets and variables → Actions → Secrets:**
 
 | Secret | Value |
 |---|---|
-| `PACKAGES_READ_TOKEN` | a GitHub PAT with `read:packages` scope |
+| `AZURE_CLIENT_ID` | `$APP_ID` from above |
+| `AZURE_TENANT_ID` | `86c9c0f2-9014-48a2-99e7-785b23ee2769` (same tenant as the backends) |
+| `AZURE_SUBSCRIPTION_ID` | `cfb23074-9c21-4bc5-aecb-4845d97a147e` (same subscription as the backends) |
+| `PACKAGES_READ_TOKEN` | a GitHub PAT with `read:packages` scope, so the workflow can install `@subhajitdas298/test-data-protos` |
 
-Also enable Pages once in **Settings → Pages → Build and deployment → Source:
-GitHub Actions** if it isn't already. After that, every push to `main` deploys
-automatically.
+**Settings → Secrets and variables → Actions → Variables:**
+
+| Variable | Value |
+|---|---|
+| `AZURE_STORAGE_ACCOUNT_NAME` | the name you chose above |
+
+Once those are set, any push to `main` (including a merged PR) triggers the
+workflow and deploys to the storage account's static website URL.
 
 ## Tech stack
 
