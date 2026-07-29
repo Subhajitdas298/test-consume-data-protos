@@ -63,8 +63,7 @@ export default function DataVisualizer({
         direction="row"
         spacing={{ xs: 1, sm: 2 }}
         useFlexGap
-        flexWrap="wrap"
-        sx={{ alignItems: 'center', mb: { xs: 2, sm: 3 } }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap', mb: { xs: 2, sm: 3 } }}
       >
         <Button variant="contained" onClick={reload} disabled={loading}>
           Refresh data
