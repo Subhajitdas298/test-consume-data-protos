@@ -14,7 +14,7 @@ export default function Page({
   return (
     <>
       <TopBar title={title} showBack={showBack} />
-      <Container sx={{ py: 4 }}>{children}</Container>
+      <Container sx={{ py: { xs: 2, sm: 4 } }}>{children}</Container>
     </>
   )
 }

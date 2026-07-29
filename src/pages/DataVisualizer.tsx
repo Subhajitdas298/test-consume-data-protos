@@ -18,9 +18,10 @@ import {
   Brush,
   ResponsiveContainer,
 } from 'recharts'
-import type { DateRecord, Root } from '@subhajitdas298/test-data-protos'
+import type { DateRecord } from '@subhajitdas298/test-data-protos'
 
 import { useRootData } from '../api/useRootData'
+import type { FetchResult } from '../api/dataClient'
 import Page from '../components/Page'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
@@ -34,13 +35,13 @@ export default function DataVisualizer({
   fetchFn,
 }: {
   title: string
-  fetchFn: (baseUrl: string) => Promise<Root>
+  fetchFn: (baseUrl: string) => Promise<FetchResult>
 }) {
   const { backend } = useDataSource()
   const baseUrl = BACKENDS[backend].baseUrl
   const fetcher = useCallback(() => fetchFn(baseUrl), [fetchFn, baseUrl])
 
-  const { root, loading, error, reload } = useRootData(fetcher)
+  const { root, loading, error, stats, reload } = useRootData(fetcher)
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
@@ -54,15 +55,26 @@ export default function DataVisualizer({
 
   return (
     <Page title={title} showBack>
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
+      <Typography color="text.secondary" sx={{ mb: { xs: 1, sm: 2 } }}>
         Source: {BACKENDS[backend].label} ({baseUrl})
       </Typography>
 
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 3 }}>
+      <Stack
+        direction="row"
+        spacing={{ xs: 1, sm: 2 }}
+        useFlexGap
+        flexWrap="wrap"
+        sx={{ alignItems: 'center', mb: { xs: 2, sm: 3 } }}
+      >
         <Button variant="contained" onClick={reload} disabled={loading}>
           Refresh data
         </Button>
         {loading && <CircularProgress size={24} />}
+        {!loading && stats && (
+          <Typography variant="body2" color="text.secondary">
+            {(stats.elapsedMs / 1000).toFixed(2)}s &bull; {(stats.bytes / (1024 * 1024)).toFixed(2)} MB
+          </Typography>
+        )}
 
         <FormControl size="small" sx={{ minWidth: 100 }} disabled={days.length === 0}>
           <InputLabel id="day-label">Day</InputLabel>
@@ -105,7 +117,7 @@ export default function DataVisualizer({
 
       {chartData.length > 0 && (
         <>
-          <Typography sx={{ mb: 2 }}>
+          <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
             Day {day}, field "{field}" — {chartData.length.toLocaleString()} points. Drag the
             handles on the brush below the chart to zoom into a range.
           </Typography>
