@@ -52,7 +52,7 @@ export default function Home() {
         backend (Spring MVC or WebFlux) it's fetched from.
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 8 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 8 }} sx={{ mb: { xs: 2, sm: 3 } }}>
         {CARDS.map((card) => (
           <Card key={card.to} sx={{ flex: 1 }}>
             <CardActionArea component={Link} to={card.to} sx={{ height: '100%', p: 1 }}>
@@ -66,6 +66,20 @@ export default function Home() {
           </Card>
         ))}
       </Stack>
+
+      <Card>
+        <CardActionArea component={Link} to="/benchmark" sx={{ p: 1 }}>
+          <CardContent>
+            <Typography variant="h6" component="h2" gutterBottom>
+              Auto Benchmark
+            </Typography>
+            <Typography color="text.secondary">
+              Runs a configurable number of timed JSON/Protobuf call pairs against both
+              backends and compares average and median latency and payload size side by side.
+            </Typography>
+          </CardContent>
+        </CardActionArea>
+      </Card>
     </Page>
   )
 }
