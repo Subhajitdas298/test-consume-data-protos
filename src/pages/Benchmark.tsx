@@ -35,7 +35,10 @@ const BACKEND_KEYS = Object.keys(BACKENDS) as Backend[]
 const COMPACT_CELL_SX = { px: 0.75, py: 0.5, fontSize: '0.75rem' }
 
 function emptyResults(): Results {
-  return Object.fromEntries(BACKEND_KEYS.map((key) => [key, []])) as Results
+  return BACKEND_KEYS.reduce((acc, key) => {
+    acc[key] = []
+    return acc
+  }, {} as Results)
 }
 
 function median(sorted: number[]): number {
