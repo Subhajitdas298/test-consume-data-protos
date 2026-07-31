@@ -1,7 +1,11 @@
 import { useState } from 'react'
+import Accordion from '@mui/material/Accordion'
+import AccordionDetails from '@mui/material/AccordionDetails'
+import AccordionSummary from '@mui/material/AccordionSummary'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -29,6 +33,14 @@ interface BenchmarkCall {
 type Results = Record<Backend, BenchmarkCall[]>
 
 type Status = 'idle' | 'running' | 'done' | 'error'
+
+type LogType = 'info' | 'error'
+
+interface LogEntry {
+  message: string
+  type: LogType
+  timestamp: string
+}
 
 const BACKEND_KEYS = Object.keys(BACKENDS) as Backend[]
 
@@ -58,10 +70,16 @@ function summarize(calls: BenchmarkCall[]) {
   }
 }
 
-async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
+async function withRetry<T>(
+  label: string,
+  pushLog: (message: string) => void,
+  fn: () => Promise<T>,
+): Promise<T> {
+  pushLog(`${label}…`)
   try {
     return await fn()
   } catch {
+    pushLog(`${label} (retry 1)…`)
     return await fn()
   }
 }
@@ -104,24 +122,33 @@ export default function Benchmark() {
   const [activity, setActivity] = useState('')
   const [results, setResults] = useState<Results>(emptyResults())
   const [error, setError] = useState<string | null>(null)
+  const [logs, setLogs] = useState<LogEntry[]>([])
 
   const running = status === 'running'
+
+  const pushLog = (message: string, type: LogType = 'info', updateActivity = true) => {
+    if (updateActivity) setActivity(message)
+    setLogs((prev) => [{ message, type, timestamp: new Date().toISOString() }, ...prev])
+  }
 
   const start = async () => {
     setStatus('running')
     setError(null)
     setResults(emptyResults())
+    setLogs([])
 
     try {
       for (const key of BACKEND_KEYS) {
         const meta = BACKENDS[key]
 
-        setActivity(`Warming up ${meta.label}…`)
-        await retryOnce(() => fetchRootDataJson(meta.baseUrl))
+        await withRetry(`Warming up ${meta.label}`, pushLog, () => fetchRootDataJson(meta.baseUrl))
 
         for (let pair = 1; pair <= pairs; pair++) {
-          setActivity(`${meta.label} — pair ${pair}/${pairs}, Protobuf…`)
-          const proto = await retryOnce(() => fetchRootDataProto(meta.baseUrl))
+          const proto = await withRetry(
+            `${meta.label} — pair ${pair}/${pairs}, Protobuf`,
+            pushLog,
+            () => fetchRootDataProto(meta.baseUrl),
+          )
           setResults((prev) => ({
             ...prev,
             [key]: [
@@ -130,8 +157,11 @@ export default function Benchmark() {
             ],
           }))
 
-          setActivity(`${meta.label} — pair ${pair}/${pairs}, JSON…`)
-          const json = await retryOnce(() => fetchRootDataJson(meta.baseUrl))
+          const json = await withRetry(
+            `${meta.label} — pair ${pair}/${pairs}, JSON`,
+            pushLog,
+            () => fetchRootDataJson(meta.baseUrl),
+          )
           setResults((prev) => ({
             ...prev,
             [key]: [
@@ -141,10 +171,12 @@ export default function Benchmark() {
           }))
         }
       }
-      setActivity('Benchmark complete')
+      pushLog('Benchmark complete')
       setStatus('done')
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : String(err)
+      pushLog(`Benchmark failed: ${message}`, 'error', false)
+      setError(message)
       setActivity('')
       setStatus('error')
     }
@@ -247,6 +279,31 @@ export default function Benchmark() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Accordion sx={{ mt: 3 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography>Logs ({logs.length})</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Stack spacing={0.5}>
+            {logs.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                No logs yet
+              </Typography>
+            )}
+            {logs.map((entry, index) => (
+              <Typography
+                key={index}
+                variant="body2"
+                color={entry.type === 'error' ? 'error.main' : 'text.primary'}
+                sx={{ fontFamily: 'monospace' }}
+              >
+                {entry.timestamp} {entry.type} {entry.message}
+              </Typography>
+            ))}
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
     </Page>
   )
 }
