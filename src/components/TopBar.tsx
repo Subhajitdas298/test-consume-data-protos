@@ -10,7 +10,15 @@ import { Link } from 'react-router-dom'
 import { BACKENDS, type Backend } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
-export default function TopBar({ title, showBack = false }: { title: string; showBack?: boolean }) {
+export default function TopBar({
+  title,
+  showBack = false,
+  showBackendToggle = true,
+}: {
+  title: string
+  showBack?: boolean
+  showBackendToggle?: boolean
+}) {
   const { backend, setBackend } = useDataSource()
 
   return (
@@ -32,23 +40,25 @@ export default function TopBar({ title, showBack = false }: { title: string; sho
           {title}
         </Typography>
 
-        <ToggleButtonGroup
-          value={backend}
-          exclusive
-          size="large"
-          onChange={(_, value: Backend | null) => value && setBackend(value)}
-          sx={{ bgcolor: 'background.paper' }}
-        >
-          {Object.entries(BACKENDS).map(([key, { label }]) => (
-            <ToggleButton
-              key={key}
-              value={key}
-              sx={{ fontWeight: 'bold', px: { xs: 1.5, sm: 3 } }}
-            >
-              {label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+        {showBackendToggle && (
+          <ToggleButtonGroup
+            value={backend}
+            exclusive
+            size="large"
+            onChange={(_, value: Backend | null) => value && setBackend(value)}
+            sx={{ bgcolor: 'background.paper' }}
+          >
+            {Object.entries(BACKENDS).map(([key, { label }]) => (
+              <ToggleButton
+                key={key}
+                value={key}
+                sx={{ fontWeight: 'bold', px: { xs: 1.5, sm: 3 } }}
+              >
+                {label}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        )}
       </Toolbar>
     </AppBar>
   )

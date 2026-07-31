@@ -58,6 +58,14 @@ function summarize(calls: BenchmarkCall[]) {
   }
 }
 
+async function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch {
+    return await fn()
+  }
+}
+
 const formatTime = (ms: number) => `${(ms / 1000).toFixed(2)}s`
 const formatSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 
@@ -109,11 +117,11 @@ export default function Benchmark() {
         const meta = BACKENDS[key]
 
         setActivity(`Warming up ${meta.label}…`)
-        await fetchRootDataJson(meta.baseUrl)
+        await retryOnce(() => fetchRootDataJson(meta.baseUrl))
 
         for (let pair = 1; pair <= pairs; pair++) {
           setActivity(`${meta.label} — pair ${pair}/${pairs}, Protobuf…`)
-          const proto = await fetchRootDataProto(meta.baseUrl)
+          const proto = await retryOnce(() => fetchRootDataProto(meta.baseUrl))
           setResults((prev) => ({
             ...prev,
             [key]: [
@@ -123,7 +131,7 @@ export default function Benchmark() {
           }))
 
           setActivity(`${meta.label} — pair ${pair}/${pairs}, JSON…`)
-          const json = await fetchRootDataJson(meta.baseUrl)
+          const json = await retryOnce(() => fetchRootDataJson(meta.baseUrl))
           setResults((prev) => ({
             ...prev,
             [key]: [
@@ -149,7 +157,7 @@ export default function Benchmark() {
   }))
 
   return (
-    <Page title="Auto Benchmark" showBack>
+    <Page title="Auto Benchmark" showBack showBackendToggle={false}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}
@@ -171,9 +179,9 @@ export default function Benchmark() {
       </Stack>
 
       {activity && (
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
+        <Alert severity="info" sx={{ mb: 2 }}>
           {activity}
-        </Typography>
+        </Alert>
       )}
 
       {error && (
