@@ -21,7 +21,8 @@ export async function fetchRootDataProto(baseUrl: string): Promise<FetchResult> 
   const response = await get(baseUrl, 'application/x-protobuf')
   const buffer = await response.arrayBuffer()
   const root = fromBinary(RootSchema, new Uint8Array(buffer))
-  return { root, elapsedMs: performance.now() - start, bytes: buffer.byteLength }
+  const elapsedMs = performance.now() - start
+  return { root, elapsedMs, bytes: buffer.byteLength }
 }
 
 export async function fetchRootDataJson(baseUrl: string): Promise<FetchResult> {
@@ -29,5 +30,6 @@ export async function fetchRootDataJson(baseUrl: string): Promise<FetchResult> {
   const response = await get(baseUrl, 'application/json')
   const text = await response.text()
   const root = JSON.parse(text) as Root
-  return { root, elapsedMs: performance.now() - start, bytes: new TextEncoder().encode(text).length }
+  const elapsedMs = performance.now() - start
+  return { root, elapsedMs, bytes: new TextEncoder().encode(text).length }
 }
