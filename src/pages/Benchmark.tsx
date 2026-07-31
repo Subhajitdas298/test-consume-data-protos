@@ -204,10 +204,14 @@ export default function Benchmark() {
           disabled={running}
           sx={{ width: { xs: '100%', sm: 200 } }}
         />
-        <Button variant="contained" onClick={() => void start()} disabled={running}>
-          {status === 'idle' ? 'Start benchmark' : 'Run again'}
+        <Button
+          variant="contained"
+          onClick={() => void start()}
+          disabled={running}
+          startIcon={running ? <CircularProgress size={16} color="inherit" /> : undefined}
+        >
+          {running ? 'Running' : status === 'idle' ? 'Start benchmark' : 'Run again'}
         </Button>
-        {running && <CircularProgress size={24} />}
       </Stack>
 
       {activity && (
