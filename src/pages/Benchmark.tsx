@@ -34,9 +34,12 @@ type Results = Record<Backend, BenchmarkCall[]>
 
 type Status = 'idle' | 'running' | 'done' | 'error'
 
+type LogType = 'info' | 'error'
+
 interface LogEntry {
   message: string
-  timestamp: number
+  type: LogType
+  timestamp: string
 }
 
 const BACKEND_KEYS = Object.keys(BACKENDS) as Backend[]
@@ -84,11 +87,6 @@ async function withRetry<T>(
 const formatTime = (ms: number) => `${(ms / 1000).toFixed(2)}s`
 const formatSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 
-function formatTimestamp(ms: number): string {
-  const date = new Date(ms)
-  return `${date.toLocaleTimeString([], { hour12: false })}.${String(date.getMilliseconds()).padStart(3, '0')}`
-}
-
 function CallCell({ call }: { call: BenchmarkCall | undefined }) {
   if (!call) return <TableCell sx={COMPACT_CELL_SX} align="right">—</TableCell>
   return (
@@ -128,9 +126,9 @@ export default function Benchmark() {
 
   const running = status === 'running'
 
-  const pushLog = (message: string, updateActivity = true) => {
+  const pushLog = (message: string, type: LogType = 'info', updateActivity = true) => {
     if (updateActivity) setActivity(message)
-    setLogs((prev) => [{ message, timestamp: Date.now() }, ...prev])
+    setLogs((prev) => [{ message, type, timestamp: new Date().toISOString() }, ...prev])
   }
 
   const start = async () => {
@@ -177,7 +175,7 @@ export default function Benchmark() {
       setStatus('done')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      pushLog(`Benchmark failed: ${message}`, false)
+      pushLog(`Benchmark failed: ${message}`, 'error', false)
       setError(message)
       setActivity('')
       setStatus('error')
@@ -294,8 +292,13 @@ export default function Benchmark() {
               </Typography>
             )}
             {logs.map((entry, index) => (
-              <Typography key={index} variant="body2" sx={{ fontFamily: 'monospace' }}>
-                [{formatTimestamp(entry.timestamp)}] {entry.message}
+              <Typography
+                key={index}
+                variant="body2"
+                color={entry.type === 'error' ? 'error.main' : 'text.primary'}
+                sx={{ fontFamily: 'monospace' }}
+              >
+                {entry.timestamp} {entry.type} {entry.message}
               </Typography>
             ))}
           </Stack>
