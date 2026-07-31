@@ -6,6 +6,7 @@ import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
@@ -204,10 +205,14 @@ export default function Benchmark() {
           disabled={running}
           sx={{ width: { xs: '100%', sm: 200 } }}
         />
-        <Button variant="contained" onClick={() => void start()} disabled={running}>
-          {status === 'idle' ? 'Start benchmark' : 'Run again'}
+        <Button
+          variant="contained"
+          onClick={() => void start()}
+          disabled={running}
+          startIcon={running ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+        >
+          {running ? 'Running' : status === 'idle' ? 'Start benchmark' : 'Run again'}
         </Button>
-        {running && <CircularProgress size={24} />}
       </Stack>
 
       {activity && (
