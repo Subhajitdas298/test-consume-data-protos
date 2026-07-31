@@ -71,7 +71,7 @@ export default function Home() {
         <CardActionArea component={Link} to="/benchmark" sx={{ p: 1 }}>
           <CardContent>
             <Typography variant="h6" component="h2" gutterBottom>
-              Auto Benchmark
+              Benchmark and Compare
             </Typography>
             <Typography color="text.secondary">
               Runs a configurable number of timed JSON/Protobuf call pairs against both
