@@ -180,8 +180,7 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Plotly (`plotly.js-gl2d-dist-min`: WebGL `scattergl` and SVG `scatter`) for the
-  zoomable line charts, lazy-loaded (`PlotlyChart`) so it only ships to the chart
-  routes
+- Apache ECharts (`echarts`, Canvas or SVG renderer) for the zoomable line chart,
+  lazy-loaded (`EChart`) so it only loads when a chart is rendered
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
