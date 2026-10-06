@@ -21,11 +21,15 @@ function loadPlotly(): Promise<PlotlyModule> {
 
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
+export type ChartRenderer = 'webgl' | 'svg'
+
 export default function PlotlyChart({
   values,
+  renderer,
   height = 500,
 }: {
   values: number[]
+  renderer: ChartRenderer
   height?: number
 }) {
   const theme = useTheme()
@@ -62,7 +66,7 @@ export default function PlotlyChart({
         el,
         [
           {
-            type: 'scattergl',
+            type: renderer === 'webgl' ? 'scattergl' : 'scatter',
             mode: 'lines',
             y: values,
             line: { color: lineColor, width: 1.5 },
@@ -100,7 +104,7 @@ export default function PlotlyChart({
     return () => {
       cancelled = true
     }
-  }, [plotly, values, height, textColor, gridColor, lineColor, paperColor])
+  }, [plotly, values, renderer, height, textColor, gridColor, lineColor, paperColor])
 
   useEffect(() => {
     const el = ref.current

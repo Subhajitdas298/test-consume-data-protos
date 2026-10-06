@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
@@ -13,13 +13,18 @@ import type { DateRecord } from '@subhajitdas298/test-data-protos'
 import { useRootData } from '../api/useRootData'
 import type { FetchResult } from '../api/dataClient'
 import Page from '../components/Page'
-import PlotlyChart from '../components/PlotlyChart'
+import PlotlyChart, { type ChartRenderer } from '../components/PlotlyChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
 type Field = Exclude<keyof DateRecord, '$typeName' | '$unknown'>
 
 const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
+
+const CHARTS: { renderer: ChartRenderer; label: string }[] = [
+  { renderer: 'webgl', label: 'WebGL (scattergl)' },
+  { renderer: 'svg', label: 'SVG (scatter)' },
+]
 
 export default function DataVisualizer({
   title,
@@ -104,11 +109,18 @@ export default function DataVisualizer({
       {values.length > 0 && (
         <>
           <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
-            Day {day}, field "{field}" — {values.length.toLocaleString()} points. Drag on the
-            chart or the range slider below it to zoom, double-click to reset.
+            Day {day}, field "{field}" — {values.length.toLocaleString()} points, drawn twice
+            for comparison. Drag on a chart to zoom, double-click to reset.
           </Typography>
 
-          <PlotlyChart values={values} />
+          {CHARTS.map(({ renderer, label }) => (
+            <Fragment key={renderer}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, mb: 1 }}>
+                {label}
+              </Typography>
+              <PlotlyChart values={values} renderer={renderer} />
+            </Fragment>
+          ))}
         </>
       )}
     </Page>
