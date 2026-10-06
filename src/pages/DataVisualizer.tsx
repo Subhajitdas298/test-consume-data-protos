@@ -47,7 +47,7 @@ export default function DataVisualizer({
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
-  const [renderer, setRenderer] = useState<ChartRenderer>('canvas')
+  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
   // values array it was started with, so a toggle, day/field change or reload
   // unmounts it (disposing the ECharts instance) instead of updating it.
@@ -164,8 +164,8 @@ export default function DataVisualizer({
             setShown(null)
           }}
         >
+          <ToggleButton value="webgl">WebGL</ToggleButton>
           <ToggleButton value="canvas">Canvas</ToggleButton>
-          <ToggleButton value="svg">SVG</ToggleButton>
         </ToggleButtonGroup>
         {values.length > 0 && (
           <Typography variant="body2" color="text.secondary">

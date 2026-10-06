@@ -25,8 +25,9 @@ a card per representation:
 - **JSON** (`/#/json`) — used directly, same `Root` shape, no decoding needed.
 
 Both routes plot the raw values for a selected day/field as an ECharts line chart,
-but never on their own: once data is loaded, pick **Canvas** (default) or **SVG**
-rendering with the toggle and press **Render graph**. The chart is mounted only on
+but never on their own: once data is loaded, pick **WebGL** (default,
+`echarts-gl` `scatterGL`, drawn as points since ECharts has no WebGL line series, so no
+smoothing) or **Canvas** (line series with `smooth: true`, `sampling: 'lttb'`) with the toggle and press **Render graph**. The chart is mounted only on
 demand and disposed whenever the renderer, day, field or data changes. The data is
 passed to ECharts untouched; smoothing and large-series decimation are ECharts' own
 series options (`smooth: true`, `sampling: 'lttb'`). It has a zoom slider, mouse-wheel
@@ -180,7 +181,7 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Apache ECharts (`echarts`, Canvas or SVG renderer) for the zoomable line chart,
+- Apache ECharts (`echarts` Canvas, `echarts-gl` WebGL) for the zoomable line chart,
   lazy-loaded (`EChart`) so it only loads when a chart is rendered
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
