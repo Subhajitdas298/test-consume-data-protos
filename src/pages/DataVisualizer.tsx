@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
@@ -7,6 +7,8 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select, { type SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import type { DateRecord } from '@subhajitdas298/test-data-protos'
 
@@ -21,10 +23,7 @@ type Field = Exclude<keyof DateRecord, '$typeName' | '$unknown'>
 
 const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
-const CHARTS: { renderer: ChartRenderer; label: string }[] = [
-  { renderer: 'webgl', label: 'WebGL (scattergl)' },
-  { renderer: 'svg', label: 'SVG (scatter)' },
-]
+let chartRuns = 0
 
 export default function DataVisualizer({
   title,
@@ -41,6 +40,12 @@ export default function DataVisualizer({
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
+  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
+  // The chart is only mounted on demand. It is keyed per click and tied to the exact
+  // values array it was started with, so a toggle, day/field change or reload
+  // unmounts it (purging Plotly's WebGL context / SVG) instead of updating it.
+  const [shown, setShown] = useState<{ id: number; renderer: ChartRenderer; values: number[] } | null>(null)
+
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
   const values = useMemo(() => days[day]?.[field] ?? [], [days, day, field])
@@ -51,6 +56,8 @@ export default function DataVisualizer({
     () => FIELDS.filter((f) => !days[day] || (days[day][f]?.length ?? 0) > 0),
     [days, day],
   )
+
+  if (shown && (shown.values !== values || loading)) setShown(null)
 
   return (
     <Page title={title} showBack>
@@ -113,22 +120,42 @@ export default function DataVisualizer({
         </Alert>
       )}
 
-      {values.length > 0 && (
-        <>
-          <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
-            Day {day}, field "{field}" — {values.length.toLocaleString()} points, drawn twice
-            for comparison. Drag on a chart to zoom, double-click to reset.
+      <Stack
+        direction="row"
+        spacing={{ xs: 1, sm: 2 }}
+        useFlexGap
+        sx={{ alignItems: 'center', flexWrap: 'wrap', mb: { xs: 2, sm: 3 } }}
+      >
+        <Button
+          variant="contained"
+          disabled={loading || values.length === 0}
+          onClick={() => setShown({ id: ++chartRuns, renderer, values })}
+        >
+          Render graph
+        </Button>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={renderer}
+          aria-label="Chart renderer"
+          onChange={(_, next: ChartRenderer | null) => {
+            if (!next) return
+            setRenderer(next)
+            setShown(null)
+          }}
+        >
+          <ToggleButton value="webgl">WebGL</ToggleButton>
+          <ToggleButton value="svg">SVG</ToggleButton>
+        </ToggleButtonGroup>
+        {values.length > 0 && (
+          <Typography variant="body2" color="text.secondary">
+            {values.length.toLocaleString()} points
           </Typography>
+        )}
+      </Stack>
 
-          {CHARTS.map(({ renderer, label }) => (
-            <Fragment key={renderer}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2, mb: 1 }}>
-                {label}
-              </Typography>
-              <PlotlyChart values={values} renderer={renderer} />
-            </Fragment>
-          ))}
-        </>
+      {shown && (
+        <PlotlyChart key={shown.id} values={shown.values} renderer={shown.renderer} />
       )}
     </Page>
   )

@@ -24,13 +24,15 @@ a card per representation:
 - **Binary (Protobuf)** (`/#/binary`) — decoded with `fromBinary(RootSchema, bytes)`.
 - **JSON** (`/#/json`) — used directly, same `Root` shape, no decoding needed.
 
-Both routes render the raw values for a selected day/field as two identical
-Plotly line charts stacked on the page — one WebGL (`scattergl`, so very large
-series stay smooth) and one SVG (`scatter`) — for side-by-side comparison, each
-with drag-to-zoom, a range slider, and double-click to reset — the two pages share
-the same `DataVisualizer` component, `useRootData` hook, and `Page`/`TopBar`;
-only the fetch function passed in differs. Which backend to hit is app-wide
-state (`DataSourceContext`), shared by the top bar toggle and both routes.
+Both routes plot the raw values for a selected day/field as a Plotly line chart,
+but never on their own: once data is loaded, pick **WebGL** (`scattergl`, default,
+stays smooth for very large series) or **SVG** (`scatter`) with the toggle and press
+**Render graph**. The chart is mounted only on demand and unmounted (Plotly purged)
+whenever the renderer, day, field or data changes. It has drag-to-zoom, a range
+slider, and double-click to reset. The two pages share the same `DataVisualizer`
+component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function passed
+in differs. Which backend to hit is app-wide state (`DataSourceContext`), shared by
+the top bar toggle and both routes.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
