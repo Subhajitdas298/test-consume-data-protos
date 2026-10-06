@@ -45,6 +45,12 @@ export default function DataVisualizer({
 
   const values = useMemo(() => days[day]?.[field] ?? [], [days, day, field])
 
+  // The backends only populate some of the 26 proto fields, so only offer those.
+  const fields = useMemo(
+    () => FIELDS.filter((f) => !days[day] || days[day][f].length > 0),
+    [days, day],
+  )
+
   return (
     <Page title={title} showBack>
       <Typography color="text.secondary" sx={{ mb: { xs: 1, sm: 2 } }}>
@@ -91,7 +97,7 @@ export default function DataVisualizer({
             value={field}
             onChange={(e: SelectChangeEvent) => setField(e.target.value as Field)}
           >
-            {FIELDS.map((f) => (
+            {fields.map((f) => (
               <MenuItem key={f} value={f}>
                 {f}
               </MenuItem>
