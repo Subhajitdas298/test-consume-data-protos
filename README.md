@@ -27,7 +27,7 @@ a card per representation:
 Both routes plot the raw values for a selected day/field as a Plotly line chart,
 but never on their own: once data is loaded, pick **WebGL** (`scattergl`, default,
 stays smooth for very large series) or **SVG** (`scatter`) with the toggle and press
-**Render graph**. The chart is mounted only on demand and unmounted (Plotly purged)
+**Render graph**. Series longer than 4,000 points are reduced with LTTB and drawn as a smooth curve (native spline for SVG, interpolated points for WebGL). While data downloads, a progress bar shows MB received (the backends send the uncompressed size in an `X-Data-Length` header). The chart is mounted only on demand and unmounted (Plotly purged)
 whenever the renderer, day, field or data changes. It has drag-to-zoom, a range
 slider, and double-click to reset. The two pages share the same `DataVisualizer`
 component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function passed

@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
-import CircularProgress from '@mui/material/CircularProgress'
+import LinearProgress from '@mui/material/LinearProgress'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
@@ -13,7 +14,7 @@ import Typography from '@mui/material/Typography'
 import type { DateRecord } from '@subhajitdas298/test-data-protos'
 
 import { useRootData } from '../api/useRootData'
-import type { FetchResult } from '../api/dataClient'
+import type { FetchResult, ProgressHandler } from '../api/dataClient'
 import Page from '../components/Page'
 import PlotlyChart, { type ChartRenderer } from '../components/PlotlyChart'
 import { BACKENDS } from '../context/backends'
@@ -23,6 +24,8 @@ type Field = Exclude<keyof DateRecord, '$typeName' | '$unknown'>
 
 const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
+const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
+
 let chartRuns = 0
 
 export default function DataVisualizer({
@@ -30,13 +33,13 @@ export default function DataVisualizer({
   fetchFn,
 }: {
   title: string
-  fetchFn: (baseUrl: string) => Promise<FetchResult>
+  fetchFn: (baseUrl: string, onProgress?: ProgressHandler) => Promise<FetchResult>
 }) {
   const { backend } = useDataSource()
   const baseUrl = BACKENDS[backend].baseUrl
-  const fetcher = useCallback(() => fetchFn(baseUrl), [fetchFn, baseUrl])
+  const fetcher = useCallback((onProgress: ProgressHandler) => fetchFn(baseUrl, onProgress), [fetchFn, baseUrl])
 
-  const { root, loading, error, stats, reload } = useRootData(fetcher)
+  const { root, loading, error, stats, progress, reload } = useRootData(fetcher)
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
@@ -74,7 +77,20 @@ export default function DataVisualizer({
         <Button variant="contained" onClick={reload} disabled={loading}>
           Refresh data
         </Button>
-        {loading && <CircularProgress size={24} />}
+        {loading && (
+          <Box sx={{ flex: '1 1 160px', minWidth: 160, maxWidth: 360 }}>
+            <LinearProgress
+              variant={progress?.total ? 'determinate' : 'indeterminate'}
+              value={progress?.total ? Math.min(100, (progress.received / progress.total) * 100) : 0}
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Typography variant="caption" color="text.secondary">
+              {progress && progress.received > 0
+                ? `${mb(progress.received)}${progress.total ? ` / ${mb(progress.total)}` : ''} MB`
+                : 'Waiting for server…'}
+            </Typography>
+          </Box>
+        )}
         {!loading && stats && (
           <Typography variant="body2" color="text.secondary">
             {(stats.elapsedMs / 1000).toFixed(2)}s &bull; {(stats.bytes / (1024 * 1024)).toFixed(2)} MB
