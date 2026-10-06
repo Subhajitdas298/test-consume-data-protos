@@ -1,28 +1,22 @@
 import { useCallback, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
-import CircularProgress from '@mui/material/CircularProgress'
+import LinearProgress from '@mui/material/LinearProgress'
 import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select, { type SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Brush,
-  ResponsiveContainer,
-} from 'recharts'
 import type { DateRecord } from '@subhajitdas298/test-data-protos'
 
 import { useRootData } from '../api/useRootData'
-import type { FetchResult } from '../api/dataClient'
+import type { FetchResult, ProgressHandler } from '../api/dataClient'
 import Page from '../components/Page'
+import PlotlyChart, { type ChartRenderer } from '../components/PlotlyChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
@@ -30,28 +24,43 @@ type Field = Exclude<keyof DateRecord, '$typeName' | '$unknown'>
 
 const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
+const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
+
+let chartRuns = 0
+
 export default function DataVisualizer({
   title,
   fetchFn,
 }: {
   title: string
-  fetchFn: (baseUrl: string) => Promise<FetchResult>
+  fetchFn: (baseUrl: string, onProgress?: ProgressHandler) => Promise<FetchResult>
 }) {
   const { backend } = useDataSource()
   const baseUrl = BACKENDS[backend].baseUrl
-  const fetcher = useCallback(() => fetchFn(baseUrl), [fetchFn, baseUrl])
+  const fetcher = useCallback((onProgress: ProgressHandler) => fetchFn(baseUrl, onProgress), [fetchFn, baseUrl])
 
-  const { root, loading, error, stats, reload } = useRootData(fetcher)
+  const { root, loading, error, stats, progress, reload } = useRootData(fetcher)
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
+  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
+  // The chart is only mounted on demand. It is keyed per click and tied to the exact
+  // values array it was started with, so a toggle, day/field change or reload
+  // unmounts it (purging Plotly's WebGL context / SVG) instead of updating it.
+  const [shown, setShown] = useState<{ id: number; renderer: ChartRenderer; values: number[] } | null>(null)
+
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
-  const chartData = useMemo(() => {
-    const record = days[day]
-    if (!record) return []
-    return record[field].map((value, index) => ({ index, value }))
-  }, [days, day, field])
+  const values = useMemo(() => days[day]?.[field] ?? [], [days, day, field])
+
+  // The backends only populate some of the 26 proto fields (JSON omits the empty
+  // ones entirely), so only offer those.
+  const fields = useMemo(
+    () => FIELDS.filter((f) => !days[day] || (days[day][f]?.length ?? 0) > 0),
+    [days, day],
+  )
+
+  if (shown && (shown.values !== values || loading)) setShown(null)
 
   return (
     <Page title={title} showBack>
@@ -68,7 +77,20 @@ export default function DataVisualizer({
         <Button variant="contained" onClick={reload} disabled={loading}>
           Refresh data
         </Button>
-        {loading && <CircularProgress size={24} />}
+        {loading && (
+          <Box sx={{ flex: '1 1 160px', minWidth: 160, maxWidth: 360 }}>
+            <LinearProgress
+              variant={progress?.total ? 'determinate' : 'indeterminate'}
+              value={progress?.total ? Math.min(100, (progress.received / progress.total) * 100) : 0}
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Typography variant="caption" color="text.secondary">
+              {progress && progress.received > 0
+                ? `${mb(progress.received)}${progress.total ? ` / ${mb(progress.total)}` : ''} MB`
+                : 'Waiting for server…'}
+            </Typography>
+          </Box>
+        )}
         {!loading && stats && (
           <Typography variant="body2" color="text.secondary">
             {(stats.elapsedMs / 1000).toFixed(2)}s &bull; {(stats.bytes / (1024 * 1024)).toFixed(2)} MB
@@ -99,7 +121,7 @@ export default function DataVisualizer({
             value={field}
             onChange={(e: SelectChangeEvent) => setField(e.target.value as Field)}
           >
-            {FIELDS.map((f) => (
+            {fields.map((f) => (
               <MenuItem key={f} value={f}>
                 {f}
               </MenuItem>
@@ -114,30 +136,42 @@ export default function DataVisualizer({
         </Alert>
       )}
 
-      {chartData.length > 0 && (
-        <>
-          <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
-            Day {day}, field "{field}" — {chartData.length.toLocaleString()} points. Drag the
-            handles on the brush below the chart to zoom into a range.
+      <Stack
+        direction="row"
+        spacing={{ xs: 1, sm: 2 }}
+        useFlexGap
+        sx={{ alignItems: 'center', flexWrap: 'wrap', mb: { xs: 2, sm: 3 } }}
+      >
+        <Button
+          variant="contained"
+          disabled={loading || values.length === 0}
+          onClick={() => setShown({ id: ++chartRuns, renderer, values })}
+        >
+          Render graph
+        </Button>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          value={renderer}
+          aria-label="Chart renderer"
+          onChange={(_, next: ChartRenderer | null) => {
+            if (!next) return
+            setRenderer(next)
+            setShown(null)
+          }}
+        >
+          <ToggleButton value="webgl">WebGL</ToggleButton>
+          <ToggleButton value="svg">SVG</ToggleButton>
+        </ToggleButtonGroup>
+        {values.length > 0 && (
+          <Typography variant="body2" color="text.secondary">
+            {values.length.toLocaleString()} points
           </Typography>
+        )}
+      </Stack>
 
-          <ResponsiveContainer width="100%" height={500}>
-            <LineChart data={chartData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="index" />
-              <YAxis domain={['auto', 'auto']} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#1976d2"
-                dot={false}
-                isAnimationActive={false}
-              />
-              <Brush dataKey="index" height={30} travellerWidth={8} />
-            </LineChart>
-          </ResponsiveContainer>
-        </>
+      {shown && (
+        <PlotlyChart key={shown.id} values={shown.values} renderer={shown.renderer} />
       )}
     </Page>
   )

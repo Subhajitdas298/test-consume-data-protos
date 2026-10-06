@@ -24,11 +24,15 @@ a card per representation:
 - **Binary (Protobuf)** (`/#/binary`) — decoded with `fromBinary(RootSchema, bytes)`.
 - **JSON** (`/#/json`) — used directly, same `Root` shape, no decoding needed.
 
-Both routes render an identical line chart (recharts) of the raw values for a
-selected day/field, with drag-to-zoom via a Brush control — the two pages share
-the same `DataVisualizer` component, `useRootData` hook, and `Page`/`TopBar`;
-only the fetch function passed in differs. Which backend to hit is app-wide
-state (`DataSourceContext`), shared by the top bar toggle and both routes.
+Both routes plot the raw values for a selected day/field as a Plotly line chart,
+but never on their own: once data is loaded, pick **WebGL** (`scattergl`, default,
+stays smooth for very large series) or **SVG** (`scatter`) with the toggle and press
+**Render graph**. The SVG chart uses Plotly's own spline line shape (`line.shape: 'spline'`, `smoothing: 1.3`) for series up to 100k points (it gets too slow beyond that, so larger ones fall back to straight segments); `scattergl` has no spline mode, so the WebGL chart always draws straight segments. While data downloads, a progress bar shows MB received (the backends send the uncompressed size in an `X-Data-Length` header). The chart is mounted only on demand and unmounted (Plotly purged)
+whenever the renderer, day, field or data changes. It has drag-to-zoom, a range
+slider, and double-click to reset. The two pages share the same `DataVisualizer`
+component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function passed
+in differs. Which backend to hit is app-wide state (`DataSourceContext`), shared by
+the top bar toggle and both routes.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
@@ -174,6 +178,8 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- recharts for the zoomable line chart
+- Plotly (`plotly.js-gl2d-dist-min`: WebGL `scattergl` and SVG `scatter`) for the
+  zoomable line charts, lazy-loaded (`PlotlyChart`) so it only ships to the chart
+  routes
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload

@@ -16,20 +16,56 @@ async function get(baseUrl: string, accept: string): Promise<Response> {
   return response
 }
 
-export async function fetchRootDataProto(baseUrl: string): Promise<FetchResult> {
-  const start = performance.now()
-  const response = await get(baseUrl, 'application/x-protobuf')
-  const buffer = await response.arrayBuffer()
-  const root = fromBinary(RootSchema, new Uint8Array(buffer))
-  const elapsedMs = performance.now() - start
-  return { root, elapsedMs, bytes: buffer.byteLength }
+export interface Progress {
+  received: number
+  /** Uncompressed body size, or null if the server didn't say. */
+  total: number | null
 }
 
-export async function fetchRootDataJson(baseUrl: string): Promise<FetchResult> {
+export type ProgressHandler = (progress: Progress) => void
+
+// Reads the body chunk by chunk so download progress can be reported. The backends
+// send the uncompressed size in X-Data-Length (Content-Length would be the gzipped
+// size for JSON, which doesn't match the bytes the stream yields).
+async function readBody(response: Response, onProgress?: ProgressHandler): Promise<Uint8Array> {
+  const header = response.headers.get('X-Data-Length')
+  const total = header && Number.isFinite(Number(header)) ? Number(header) : null
+  onProgress?.({ received: 0, total })
+  if (!response.body) return new Uint8Array(await response.arrayBuffer())
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    received += value.length
+    onProgress?.({ received, total })
+  }
+  const out = new Uint8Array(received)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.length
+  }
+  return out
+}
+
+export async function fetchRootDataProto(baseUrl: string, onProgress?: ProgressHandler): Promise<FetchResult> {
+  const start = performance.now()
+  const response = await get(baseUrl, 'application/x-protobuf')
+  const bytes = await readBody(response, onProgress)
+  const root = fromBinary(RootSchema, bytes)
+  const elapsedMs = performance.now() - start
+  return { root, elapsedMs, bytes: bytes.length }
+}
+
+export async function fetchRootDataJson(baseUrl: string, onProgress?: ProgressHandler): Promise<FetchResult> {
   const start = performance.now()
   const response = await get(baseUrl, 'application/json')
-  const text = await response.text()
-  const root = JSON.parse(text) as Root
+  const bytes = await readBody(response, onProgress)
+  const root = JSON.parse(new TextDecoder().decode(bytes)) as Root
   const elapsedMs = performance.now() - start
-  return { root, elapsedMs, bytes: new TextEncoder().encode(text).length }
+  return { root, elapsedMs, bytes: bytes.length }
 }
