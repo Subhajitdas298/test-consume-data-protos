@@ -5,7 +5,3 @@ declare module 'plotly.js-gl2d-dist-min' {
   const Plotly: typeof PlotlyTypes
   export default Plotly
 }
-
-// Side-effect-only script (patches HTMLCanvasElement.prototype.getContext);
-// it has no exports and no typings.
-declare module 'virtual-webgl/src/virtual-webgl.js'

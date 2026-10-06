@@ -9,16 +9,8 @@ type PlotlyModule = typeof import('plotly.js-gl2d-dist-min').default
 let plotlyPromise: Promise<PlotlyModule> | undefined
 
 // Loaded lazily so the ~1.5 MB Plotly bundle only ships to the chart routes.
-// virtual-webgl patches HTMLCanvasElement.getContext when it is evaluated, so
-// it has to run before Plotly creates its first WebGL context.
-//
-// The WebGL1 build is imported on purpose: the package's default entry
-// (virtual-webgl2.js) throws when evaluated as a strict-mode ES module, and even
-// as a classic script it leaves Plotly reporting "WebGL is not supported".
-// Plotly's gl traces only need WebGL1 anyway.
 function loadPlotly(): Promise<PlotlyModule> {
-  plotlyPromise ??= import('virtual-webgl/src/virtual-webgl.js')
-    .then(() => import('plotly.js-gl2d-dist-min'))
+  plotlyPromise ??= import('plotly.js-gl2d-dist-min')
     .then((module) => module.default)
     .catch((err: unknown) => {
       plotlyPromise = undefined

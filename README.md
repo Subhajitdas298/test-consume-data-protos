@@ -176,11 +176,6 @@ workflow and deploys to the storage account's static website URL.
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
 - Plotly (`plotly.js-gl2d-dist-min`, WebGL `scattergl`) for the zoomable line
-  chart, with [`virtual-webgl`](https://github.com/greggman/virtual-webgl) sharing
-  one WebGL context across canvases. Both are lazy-loaded (`PlotlyChart`) so
-  they only ship to the chart routes. `virtual-webgl`'s **WebGL1** build
-  (`src/virtual-webgl.js`) is imported deliberately: its default entry
-  (`virtual-webgl2.js`) throws when bundled as a strict-mode ES module, and even
-  as a classic script it makes Plotly report "WebGL is not supported".
+  chart, lazy-loaded (`PlotlyChart`) so it only ships to the chart routes
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
