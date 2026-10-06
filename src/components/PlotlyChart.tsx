@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
-import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
-
-import { densify, lttb } from './smoothing'
 
 type PlotlyModule = typeof import('plotly.js-gl2d-dist-min').default
 
@@ -22,12 +19,11 @@ function loadPlotly(): Promise<PlotlyModule> {
   return plotlyPromise
 }
 
-// Smooth curves need a manageable number of points: Plotly's SVG spline costs minutes
-// at millions of points, and at that size there are far more points than pixels anyway.
-// Longer series are therefore reduced with LTTB (which keeps peaks and troughs) first.
-const MAX_SMOOTH_POINTS = 4_000
-// scattergl has no spline mode, so the WebGL curve is interpolated into more points.
-const WEBGL_STEPS = 6
+// Smooth curves are a Plotly SVG-trace feature (scattergl has no spline shape), and
+// their cost grows roughly linearly with point count: ~4 s at 100k points, ~35 s at 1M,
+// minutes at 10M. With many points per pixel a spline looks the same as straight
+// segments anyway, so past this size the SVG chart falls back to linear.
+const MAX_SPLINE_POINTS = 100_000
 
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
@@ -51,11 +47,7 @@ export default function PlotlyChart({
   const gridColor = theme.palette.divider
   const lineColor = theme.palette.primary.main
   const paperColor = theme.palette.background.paper
-  const downsampled = values.length > MAX_SMOOTH_POINTS
-  const series = useMemo(() => {
-    const base = lttb(values, MAX_SMOOTH_POINTS)
-    return renderer === 'webgl' ? densify(base, WEBGL_STEPS) : base
-  }, [values, renderer])
+  const smooth = renderer === 'svg' && values.length <= MAX_SPLINE_POINTS
 
   useEffect(() => {
     let cancelled = false
@@ -83,9 +75,8 @@ export default function PlotlyChart({
           {
             type: renderer === 'webgl' ? 'scattergl' : 'scatter',
             mode: 'lines',
-            x: series.x,
-            y: series.y,
-            line: { color: lineColor, width: 1.5, shape: renderer === 'svg' ? 'spline' : 'linear', smoothing: 1.3 },
+            y: values,
+            line: { color: lineColor, width: 1.5, shape: smooth ? 'spline' : 'linear', smoothing: 1.3 },
             hovertemplate: 'index %{x}<br>value %{y}<extra></extra>',
           },
         ],
@@ -120,7 +111,7 @@ export default function PlotlyChart({
     return () => {
       cancelled = true
     }
-  }, [plotly, series, renderer, height, textColor, gridColor, lineColor, paperColor])
+  }, [plotly, values, renderer, smooth, height, textColor, gridColor, lineColor, paperColor])
 
   useEffect(() => {
     const el = ref.current
@@ -140,12 +131,6 @@ export default function PlotlyChart({
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />
         </Box>
-      )}
-      {downsampled && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-          Smoothed view: {values.length.toLocaleString()} points reduced to{' '}
-          {MAX_SMOOTH_POINTS.toLocaleString()} (LTTB) so the curve can be drawn.
-        </Typography>
       )}
       <div ref={ref} />
     </>
