@@ -24,8 +24,9 @@ a card per representation:
 - **Binary (Protobuf)** (`/#/binary`) — decoded with `fromBinary(RootSchema, bytes)`.
 - **JSON** (`/#/json`) — used directly, same `Root` shape, no decoding needed.
 
-Both routes render an identical line chart (recharts) of the raw values for a
-selected day/field, with drag-to-zoom via a Brush control — the two pages share
+Both routes render an identical WebGL line chart (Plotly `scattergl`, so very
+large series stay smooth) of the raw values for a selected day/field, with
+drag-to-zoom, a range slider, and double-click to reset — the two pages share
 the same `DataVisualizer` component, `useRootData` hook, and `Page`/`TopBar`;
 only the fetch function passed in differs. Which backend to hit is app-wide
 state (`DataSourceContext`), shared by the top bar toggle and both routes.
@@ -174,6 +175,12 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- recharts for the zoomable line chart
+- Plotly (`plotly.js-gl2d-dist-min`, WebGL `scattergl`) for the zoomable line
+  chart, with [`virtual-webgl`](https://github.com/greggman/virtual-webgl) sharing
+  one WebGL context across canvases. Both are lazy-loaded (`PlotlyChart`) so
+  they only ship to the chart routes. `virtual-webgl`'s **WebGL1** build
+  (`src/virtual-webgl.js`) is imported deliberately: its default entry
+  (`virtual-webgl2.js`) throws when bundled as a strict-mode ES module, and even
+  as a classic script it makes Plotly report "WebGL is not supported".
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload

@@ -8,21 +8,12 @@ import InputLabel from '@mui/material/InputLabel'
 import Select, { type SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import Typography from '@mui/material/Typography'
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Brush,
-  ResponsiveContainer,
-} from 'recharts'
 import type { DateRecord } from '@subhajitdas298/test-data-protos'
 
 import { useRootData } from '../api/useRootData'
 import type { FetchResult } from '../api/dataClient'
 import Page from '../components/Page'
+import PlotlyChart from '../components/PlotlyChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
@@ -47,11 +38,7 @@ export default function DataVisualizer({
 
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
-  const chartData = useMemo(() => {
-    const record = days[day]
-    if (!record) return []
-    return record[field].map((value, index) => ({ index, value }))
-  }, [days, day, field])
+  const values = useMemo(() => days[day]?.[field] ?? [], [days, day, field])
 
   return (
     <Page title={title} showBack>
@@ -114,29 +101,14 @@ export default function DataVisualizer({
         </Alert>
       )}
 
-      {chartData.length > 0 && (
+      {values.length > 0 && (
         <>
           <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
-            Day {day}, field "{field}" — {chartData.length.toLocaleString()} points. Drag the
-            handles on the brush below the chart to zoom into a range.
+            Day {day}, field "{field}" — {values.length.toLocaleString()} points. Drag on the
+            chart or the range slider below it to zoom, double-click to reset.
           </Typography>
 
-          <ResponsiveContainer width="100%" height={500}>
-            <LineChart data={chartData} margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="index" />
-              <YAxis domain={['auto', 'auto']} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#1976d2"
-                dot={false}
-                isAnimationActive={false}
-              />
-              <Brush dataKey="index" height={30} travellerWidth={8} />
-            </LineChart>
-          </ResponsiveContainer>
+          <PlotlyChart values={values} />
         </>
       )}
     </Page>
