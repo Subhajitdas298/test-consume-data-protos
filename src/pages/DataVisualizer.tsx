@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
 import LinearProgress from '@mui/material/LinearProgress'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -16,7 +17,7 @@ import type { DateRecord } from '@subhajitdas298/test-data-protos'
 import { useRootData } from '../api/useRootData'
 import type { FetchResult, ProgressHandler } from '../api/dataClient'
 import Page from '../components/Page'
-import PlotlyChart, { type ChartRenderer } from '../components/PlotlyChart'
+import type { ChartRenderer } from '../components/EChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
@@ -25,6 +26,9 @@ type Field = Exclude<keyof DateRecord, '$typeName' | '$unknown'>
 const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
 const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
+
+// ECharts is ~1 MB, so it only loads when a chart is first rendered.
+const EChart = lazy(() => import('../components/EChart'))
 
 let chartRuns = 0
 
@@ -43,10 +47,10 @@ export default function DataVisualizer({
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
-  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
+  const [renderer, setRenderer] = useState<ChartRenderer>('canvas')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
   // values array it was started with, so a toggle, day/field change or reload
-  // unmounts it (purging Plotly's WebGL context / SVG) instead of updating it.
+  // unmounts it (disposing the ECharts instance) instead of updating it.
   const [shown, setShown] = useState<{ id: number; renderer: ChartRenderer; values: number[] } | null>(null)
 
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
@@ -160,7 +164,7 @@ export default function DataVisualizer({
             setShown(null)
           }}
         >
-          <ToggleButton value="webgl">WebGL</ToggleButton>
+          <ToggleButton value="canvas">Canvas</ToggleButton>
           <ToggleButton value="svg">SVG</ToggleButton>
         </ToggleButtonGroup>
         {values.length > 0 && (
@@ -171,7 +175,9 @@ export default function DataVisualizer({
       </Stack>
 
       {shown && (
-        <PlotlyChart key={shown.id} values={shown.values} renderer={shown.renderer} />
+        <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
+          <EChart key={shown.id} values={shown.values} renderer={shown.renderer} />
+        </Suspense>
       )}
     </Page>
   )
