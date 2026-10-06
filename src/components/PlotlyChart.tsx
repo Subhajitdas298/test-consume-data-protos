@@ -19,6 +19,12 @@ function loadPlotly(): Promise<PlotlyModule> {
   return plotlyPromise
 }
 
+// Smooth curves are a Plotly SVG-trace feature (scattergl has no spline shape), and
+// their cost grows roughly linearly with point count: ~4 s at 100k points, ~35 s at 1M,
+// minutes at 10M. With many points per pixel a spline looks the same as straight
+// segments anyway, so past this size the SVG chart falls back to linear.
+const MAX_SPLINE_POINTS = 100_000
+
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 export type ChartRenderer = 'webgl' | 'svg'
@@ -41,6 +47,7 @@ export default function PlotlyChart({
   const gridColor = theme.palette.divider
   const lineColor = theme.palette.primary.main
   const paperColor = theme.palette.background.paper
+  const smooth = renderer === 'svg' && values.length <= MAX_SPLINE_POINTS
 
   useEffect(() => {
     let cancelled = false
@@ -69,7 +76,7 @@ export default function PlotlyChart({
             type: renderer === 'webgl' ? 'scattergl' : 'scatter',
             mode: 'lines',
             y: values,
-            line: { color: lineColor, width: 1.5 },
+            line: { color: lineColor, width: 1.5, shape: smooth ? 'spline' : 'linear' },
             hovertemplate: 'index %{x}<br>value %{y}<extra></extra>',
           },
         ],
@@ -104,7 +111,7 @@ export default function PlotlyChart({
     return () => {
       cancelled = true
     }
-  }, [plotly, values, renderer, height, textColor, gridColor, lineColor, paperColor])
+  }, [plotly, values, renderer, smooth, height, textColor, gridColor, lineColor, paperColor])
 
   useEffect(() => {
     const el = ref.current
