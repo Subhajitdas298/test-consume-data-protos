@@ -45,9 +45,10 @@ export default function DataVisualizer({
 
   const values = useMemo(() => days[day]?.[field] ?? [], [days, day, field])
 
-  // The backends only populate some of the 26 proto fields, so only offer those.
+  // The backends only populate some of the 26 proto fields (JSON omits the empty
+  // ones entirely), so only offer those.
   const fields = useMemo(
-    () => FIELDS.filter((f) => !days[day] || days[day][f].length > 0),
+    () => FIELDS.filter((f) => !days[day] || (days[day][f]?.length ?? 0) > 0),
     [days, day],
   )
 
