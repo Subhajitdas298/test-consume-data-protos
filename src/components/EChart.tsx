@@ -24,7 +24,7 @@ function loadGl(): Promise<void> {
 
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
-// Smoothing and decimation are plain ECharts series options (`smooth`, `sampling`);
+// Smoothing is a plain ECharts series option (`smooth`); no sampling or downsampling;
 // the data is handed over untouched.
 export default function EChart({
   values,
@@ -85,7 +85,6 @@ export default function EChart({
               type: 'line',
               data: values,
               smooth: true,
-              sampling: 'lttb',
               showSymbol: false,
               lineStyle: { color: lineColor, width: 1.5 },
               itemStyle: { color: lineColor },

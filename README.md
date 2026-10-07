@@ -27,10 +27,10 @@ a card per representation:
 Both routes plot the raw values for a selected day/field as an ECharts line chart,
 but never on their own: once data is loaded, pick **WebGL** (default,
 `echarts-gl` `scatterGL`, drawn as points since ECharts has no WebGL line series, so no
-smoothing) or **Canvas** (line series with `smooth: true`, `sampling: 'lttb'`) with the toggle and press **Render graph**. The chart is mounted only on
+smoothing) or **Canvas** (line series with `smooth: true`, all points drawn) with the toggle and press **Render graph**. The chart is mounted only on
 demand and disposed whenever the renderer, day, field or data changes. The data is
-passed to ECharts untouched; smoothing and large-series decimation are ECharts' own
-series options (`smooth: true`, `sampling: 'lttb'`). It has a zoom slider, mouse-wheel
+passed to ECharts untouched, with no downsampling; smoothing is ECharts' own
+`smooth: true` series option. It has a zoom slider, mouse-wheel
 zoom, and a tooltip. While data downloads, a progress bar shows MB received (the
 backends send the uncompressed size in an `X-Data-Length` header). The two pages
 share the same `DataVisualizer` component, `useRootData` hook, and `Page`/`TopBar`;
