@@ -34,8 +34,10 @@ plain slice). Data is always passed to the library untouched (no downsampling):
 - **ECharts Canvas** — line series with `smooth: true`.
 - **Plotly WebGL** — `scattergl` lines (straight segments; Plotly's WebGL trace has no
   spline mode).
+- **Plotly SVG** — `scatter` with Plotly's own `spline` line shape (only up to 100k
+  points; beyond that it's too slow, so larger series draw straight segments).
 
-The chart is mounted only on demand and disposed whenever the renderer, day, field or
+The chart is mounted only on demand and fully released (ECharts `dispose`, Plotly `purge` plus dropping its d3-bound data) whenever the renderer, day, field or
 data changes; each library loads lazily the first time it's used. While data
 downloads, a progress bar shows MB received (the backends send the uncompressed size
 in an `X-Data-Length` header). The two pages share the same `DataVisualizer`

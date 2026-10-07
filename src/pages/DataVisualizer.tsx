@@ -30,12 +30,13 @@ const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
 const EChart = lazy(() => import('../components/EChart'))
 const PlotlyChart = lazy(() => import('../components/PlotlyChart'))
 
-type Mode = 'echarts-webgl' | 'echarts-canvas' | 'plotly-webgl'
+type Mode = 'echarts-webgl' | 'echarts-canvas' | 'plotly-webgl' | 'plotly-svg'
 
 const MODES: { mode: Mode; label: string }[] = [
   { mode: 'echarts-webgl', label: 'ECharts WebGL' },
   { mode: 'echarts-canvas', label: 'ECharts Canvas' },
   { mode: 'plotly-webgl', label: 'Plotly WebGL' },
+  { mode: 'plotly-svg', label: 'Plotly SVG' },
 ]
 
 const SLICES = [
@@ -216,8 +217,12 @@ export default function DataVisualizer({
 
       {shown && (
         <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
-          {shown.renderer === 'plotly-webgl' ? (
-            <PlotlyChart key={shown.id} values={shown.values} renderer="webgl" />
+          {shown.renderer.startsWith('plotly') ? (
+            <PlotlyChart
+              key={shown.id}
+              values={shown.values}
+              renderer={shown.renderer === 'plotly-webgl' ? 'webgl' : 'svg'}
+            />
           ) : (
             <EChart
               key={shown.id}

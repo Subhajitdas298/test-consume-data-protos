@@ -116,7 +116,14 @@ export default function PlotlyChart({
   useEffect(() => {
     const el = ref.current
     return () => {
-      if (plotly && el) plotly.purge(el)
+      if (plotly && el) {
+        // d3 binds the calculated points to the SVG nodes as __data__; drop them so a
+        // detached chart can't keep millions of point objects alive.
+        const nodes = Array.from(el.querySelectorAll<Element & { __data__?: unknown }>('*'))
+        plotly.purge(el)
+        for (const node of nodes) node.__data__ = undefined
+        el.replaceChildren()
+      }
     }
   }, [plotly])
 
