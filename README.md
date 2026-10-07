@@ -24,18 +24,23 @@ a card per representation:
 - **Binary (Protobuf)** (`/#/binary`) — decoded with `fromBinary(RootSchema, bytes)`.
 - **JSON** (`/#/json`) — used directly, same `Root` shape, no decoding needed.
 
-Both routes plot the raw values for a selected day/field as an ECharts line chart,
-but never on their own: once data is loaded, pick **WebGL** (default,
-`echarts-gl` `scatterGL`, drawn as points since ECharts has no WebGL line series, so no
-smoothing) or **Canvas** (line series with `smooth: true`, all points drawn) with the toggle and press **Render graph**. The chart is mounted only on
-demand and disposed whenever the renderer, day, field or data changes. The data is
-passed to ECharts untouched, with no downsampling; smoothing is ECharts' own
-`smooth: true` series option. It has a zoom slider, mouse-wheel
-zoom, and a tooltip. While data downloads, a progress bar shows MB received (the
-backends send the uncompressed size in an `X-Data-Length` header). The two pages
-share the same `DataVisualizer` component, `useRootData` hook, and `Page`/`TopBar`;
-only the fetch function passed in differs. Which backend to hit is app-wide state
-(`DataSourceContext`), shared by the top bar toggle and both routes.
+Both routes plot the raw values for a selected day/field as a line chart, but never
+on their own: once data is loaded, pick a renderer with the toggle and press **Render
+graph**. Data is always passed to the library untouched (no downsampling):
+
+- **ECharts WebGL** (default) — `echarts-gl` `scatterGL`; ECharts has no WebGL line
+  series, so it draws points and cannot be smoothed.
+- **ECharts Canvas** — line series with `smooth: true`.
+- **Plotly WebGL** — `scattergl` lines (straight segments; Plotly's WebGL trace has no
+  spline mode).
+
+The chart is mounted only on demand and disposed whenever the renderer, day, field or
+data changes; each library loads lazily the first time it's used. While data
+downloads, a progress bar shows MB received (the backends send the uncompressed size
+in an `X-Data-Length` header). The two pages share the same `DataVisualizer`
+component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function passed in
+differs. Which backend to hit is app-wide state (`DataSourceContext`), shared by the
+top bar toggle and both routes.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
@@ -181,7 +186,7 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Apache ECharts (`echarts` Canvas, `echarts-gl` WebGL) for the zoomable line chart,
-  lazy-loaded (`EChart`) so it only loads when a chart is rendered
+- Apache ECharts (`echarts` Canvas, `echarts-gl` WebGL) and Plotly (`plotly.js-gl2d-dist-min`
+  `scattergl`) for the zoomable line charts, each lazy-loaded (`EChart`, `PlotlyChart`)
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload

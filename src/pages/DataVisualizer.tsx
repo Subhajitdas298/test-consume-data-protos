@@ -17,7 +17,6 @@ import type { DateRecord } from '@subhajitdas298/test-data-protos'
 import { useRootData } from '../api/useRootData'
 import type { FetchResult, ProgressHandler } from '../api/dataClient'
 import Page from '../components/Page'
-import type { ChartRenderer } from '../components/EChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
@@ -27,8 +26,17 @@ const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
 const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
 
-// ECharts is ~1 MB, so it only loads when a chart is first rendered.
+// Each library is ~1 MB, so it only loads when its chart is first rendered.
 const EChart = lazy(() => import('../components/EChart'))
+const PlotlyChart = lazy(() => import('../components/PlotlyChart'))
+
+type Mode = 'echarts-webgl' | 'echarts-canvas' | 'plotly-webgl'
+
+const MODES: { mode: Mode; label: string }[] = [
+  { mode: 'echarts-webgl', label: 'ECharts WebGL' },
+  { mode: 'echarts-canvas', label: 'ECharts Canvas' },
+  { mode: 'plotly-webgl', label: 'Plotly WebGL' },
+]
 
 let chartRuns = 0
 
@@ -47,11 +55,11 @@ export default function DataVisualizer({
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
-  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
+  const [renderer, setRenderer] = useState<Mode>('echarts-webgl')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
   // values array it was started with, so a toggle, day/field change or reload
   // unmounts it (disposing the ECharts instance) instead of updating it.
-  const [shown, setShown] = useState<{ id: number; renderer: ChartRenderer; values: number[] } | null>(null)
+  const [shown, setShown] = useState<{ id: number; renderer: Mode; values: number[] } | null>(null)
 
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
@@ -158,14 +166,17 @@ export default function DataVisualizer({
           size="small"
           value={renderer}
           aria-label="Chart renderer"
-          onChange={(_, next: ChartRenderer | null) => {
+          onChange={(_, next: Mode | null) => {
             if (!next) return
             setRenderer(next)
             setShown(null)
           }}
         >
-          <ToggleButton value="webgl">WebGL</ToggleButton>
-          <ToggleButton value="canvas">Canvas</ToggleButton>
+          {MODES.map(({ mode, label }) => (
+            <ToggleButton key={mode} value={mode}>
+              {label}
+            </ToggleButton>
+          ))}
         </ToggleButtonGroup>
         {values.length > 0 && (
           <Typography variant="body2" color="text.secondary">
@@ -176,7 +187,15 @@ export default function DataVisualizer({
 
       {shown && (
         <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
-          <EChart key={shown.id} values={shown.values} renderer={shown.renderer} />
+          {shown.renderer === 'plotly-webgl' ? (
+            <PlotlyChart key={shown.id} values={shown.values} renderer="webgl" />
+          ) : (
+            <EChart
+              key={shown.id}
+              values={shown.values}
+              renderer={shown.renderer === 'echarts-webgl' ? 'webgl' : 'canvas'}
+            />
+          )}
         </Suspense>
       )}
     </Page>
