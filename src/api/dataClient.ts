@@ -7,8 +7,8 @@ export interface FetchResult {
   bytes: number
 }
 
-async function get(baseUrl: string, accept: string): Promise<Response> {
-  const url = `${baseUrl}/api/data`
+async function get(baseUrl: string, accept: string, size?: number): Promise<Response> {
+  const url = `${baseUrl}/api/data${size ? `?size=${size}` : ''}`
   const response = await fetch(url, { headers: { Accept: accept } })
   if (!response.ok) {
     throw new Error(`Request to ${url} failed: ${response.status} ${response.statusText}`)
@@ -52,18 +52,27 @@ async function readBody(response: Response, onProgress?: ProgressHandler): Promi
   return out
 }
 
-export async function fetchRootDataProto(baseUrl: string, onProgress?: ProgressHandler): Promise<FetchResult> {
+/** `size` asks the backend for a sample: the first N values (default: everything). */
+export async function fetchRootDataProto(
+  baseUrl: string,
+  onProgress?: ProgressHandler,
+  size?: number,
+): Promise<FetchResult> {
   const start = performance.now()
-  const response = await get(baseUrl, 'application/x-protobuf')
+  const response = await get(baseUrl, 'application/x-protobuf', size)
   const bytes = await readBody(response, onProgress)
   const root = fromBinary(RootSchema, bytes)
   const elapsedMs = performance.now() - start
   return { root, elapsedMs, bytes: bytes.length }
 }
 
-export async function fetchRootDataJson(baseUrl: string, onProgress?: ProgressHandler): Promise<FetchResult> {
+export async function fetchRootDataJson(
+  baseUrl: string,
+  onProgress?: ProgressHandler,
+  size?: number,
+): Promise<FetchResult> {
   const start = performance.now()
-  const response = await get(baseUrl, 'application/json')
+  const response = await get(baseUrl, 'application/json', size)
   const bytes = await readBody(response, onProgress)
   const root = JSON.parse(new TextDecoder().decode(bytes)) as Root
   const elapsedMs = performance.now() - start

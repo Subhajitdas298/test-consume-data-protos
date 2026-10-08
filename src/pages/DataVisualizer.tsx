@@ -39,7 +39,7 @@ const MODES: { mode: Mode; label: string }[] = [
   { mode: 'plotly-svg', label: 'Plotly SVG' },
 ]
 
-const SLICES = [
+const SAMPLE_SIZES = [
   { count: 10_000_000, label: '10M' },
   { count: 1_000_000, label: '1M' },
   { count: 100_000, label: '100k' },
@@ -53,17 +53,19 @@ export default function DataVisualizer({
   fetchFn,
 }: {
   title: string
-  fetchFn: (baseUrl: string, onProgress?: ProgressHandler) => Promise<FetchResult>
+  fetchFn: (baseUrl: string, onProgress?: ProgressHandler, size?: number) => Promise<FetchResult>
 }) {
   const { backend } = useDataSource()
   const baseUrl = BACKENDS[backend].baseUrl
-  const fetcher = useCallback((onProgress: ProgressHandler) => fetchFn(baseUrl, onProgress), [fetchFn, baseUrl])
+  const fetcher = useCallback((onProgress: ProgressHandler, size?: number) => fetchFn(baseUrl, onProgress, size),
+    [fetchFn, baseUrl],)
 
-  const { root, loading, error, stats, progress, reload } = useRootData(fetcher)
+  const { root, loading, error, stats, progress, load } = useRootData(fetcher)
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
-  const [sliceCount, setSliceCount] = useState(SLICES[0].count)
+  // Asked of the backend, which returns only the first N values.
+  const [sampleSize, setSampleSize] = useState(1_000_000)
   const [renderer, setRenderer] = useState<Mode>('echarts-webgl')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
   // values array it was started with, so a toggle, day/field change or reload
@@ -81,13 +83,7 @@ export default function DataVisualizer({
     [days, day],
   )
 
-  // Only the first N points are plotted; the full series is kept as-is when it's no longer.
-  const sliced = useMemo(
-    () => (values.length > sliceCount ? values.slice(0, sliceCount) : values),
-    [values, sliceCount],
-  )
-
-  if (shown && (shown.values !== sliced || loading)) setShown(null)
+  if (shown && (shown.values !== values || loading)) setShown(null)
 
   return (
     <Page title={title} showBack>
@@ -101,8 +97,23 @@ export default function DataVisualizer({
         useFlexGap
         sx={{ alignItems: 'center', flexWrap: 'wrap', mb: { xs: 2, sm: 3 } }}
       >
-        <Button variant="contained" onClick={reload} disabled={loading}>
-          Refresh data
+        <FormControl size="small" sx={{ minWidth: 120 }} disabled={loading}>
+          <InputLabel id="sample-label">Sample size</InputLabel>
+          <Select
+            labelId="sample-label"
+            label="Sample size"
+            value={sampleSize}
+            onChange={(e: SelectChangeEvent<number>) => setSampleSize(Number(e.target.value))}
+          >
+            {SAMPLE_SIZES.map(({ count, label }) => (
+              <MenuItem key={count} value={count}>
+                First {label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button variant="contained" onClick={() => load(sampleSize)} disabled={loading}>
+          Load data
         </Button>
         {loading && (
           <Box sx={{ flex: '1 1 160px', minWidth: 160, maxWidth: 360 }}>
@@ -171,26 +182,11 @@ export default function DataVisualizer({
       >
         <Button
           variant="contained"
-          disabled={loading || sliced.length === 0}
-          onClick={() => setShown({ id: ++chartRuns, renderer, values: sliced })}
+          disabled={loading || values.length === 0}
+          onClick={() => setShown({ id: ++chartRuns, renderer, values })}
         >
           Render graph
         </Button>
-        <FormControl size="small" sx={{ minWidth: 100 }} disabled={values.length === 0}>
-          <InputLabel id="points-label">Points</InputLabel>
-          <Select
-            labelId="points-label"
-            label="Points"
-            value={sliceCount}
-            onChange={(e: SelectChangeEvent<number>) => setSliceCount(Number(e.target.value))}
-          >
-            {SLICES.map(({ count, label }) => (
-              <MenuItem key={count} value={count}>
-                First {label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
         <ToggleButtonGroup
           exclusive
           size="small"
@@ -208,9 +204,9 @@ export default function DataVisualizer({
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        {sliced.length > 0 && (
+        {values.length > 0 && (
           <Typography variant="body2" color="text.secondary">
-            {sliced.length.toLocaleString()} of {values.length.toLocaleString()} points
+            {values.length.toLocaleString()} points
           </Typography>
         )}
       </Stack>
