@@ -26,8 +26,8 @@ a card per representation:
 
 Both routes start empty: pick a **Sample size** (first 10M / 1M / 100k / 10k values; the
 backend takes it as `?size=` and returns only that many) and press **Load data**.
-Switching backend clears the loaded data. They then plot the raw values for a selected day/field as a line chart, but never
-on their own: once data is loaded, pick a renderer with the toggle and press **Render
+Switching backend clears the loaded data. Once data is loaded, the raw values for a
+selected day/field are plotted as a line chart, but never on their own: pick a renderer with the toggle and press **Render
 graph**. Data is always passed to the library untouched (no downsampling):
 
 - **ECharts WebGL** (default) — `echarts-gl` `scatterGL`; ECharts has no WebGL line
