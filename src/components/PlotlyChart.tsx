@@ -77,7 +77,7 @@ export default function PlotlyChart({
             mode: 'lines',
             y: values,
             line: { color: lineColor, width: 1.5, shape: smooth ? 'spline' : 'linear', smoothing: 1.3 },
-            hovertemplate: 'index %{x}<br>value %{y}<extra></extra>',
+            hovertemplate: 'step %{x}<br>recall %{y}<extra></extra>',
           },
         ],
         {
@@ -91,12 +91,12 @@ export default function PlotlyChart({
           dragmode: 'zoom',
           modebar: { bgcolor: 'rgba(0,0,0,0)', color: textColor, activecolor: lineColor },
           xaxis: {
-            title: { text: 'index' },
+            title: { text: 'step' },
             gridcolor: gridColor,
             zerolinecolor: gridColor,
             rangeslider: { visible: true, bgcolor: paperColor, bordercolor: gridColor },
           },
-          yaxis: { title: { text: 'value' }, gridcolor: gridColor, zerolinecolor: gridColor },
+          yaxis: { title: { text: 'recall' }, gridcolor: gridColor, zerolinecolor: gridColor },
         },
         { responsive: true, displaylogo: false },
       )

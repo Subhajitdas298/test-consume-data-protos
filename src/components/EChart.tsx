@@ -62,7 +62,7 @@ export default function EChart({
         tooltip: { show: false },
         yAxis: {
           type: 'value',
-          name: 'value',
+          name: 'recall',
           scale: true,
           splitLine: { lineStyle: { color: gridColor } },
         },
@@ -76,7 +76,7 @@ export default function EChart({
           ...common,
           xAxis: {
             type: 'category',
-            name: 'index',
+            name: 'step',
             nameLocation: 'middle',
             nameGap: 32,
             axisLine: { lineStyle: { color: gridColor } },
@@ -107,7 +107,7 @@ export default function EChart({
           tooltip: { trigger: 'none' },
           xAxis: {
             type: 'value',
-            name: 'index',
+            name: 'step',
             nameLocation: 'middle',
             nameGap: 32,
             scale: true,
