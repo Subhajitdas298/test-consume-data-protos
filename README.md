@@ -57,7 +57,7 @@ is the left one divided by ten (counts per 10 scores vs per 100), so a bar that 
 the step is above its expected value. The bars are
 drawn as filled WebGL rectangles. Hovering shows one tooltip with both series (B observed, A expected
 for the containing 100-score bucket, A per 10 scores, and B's difference from expected), the x axis
-labels every B bar with its score range, and the same Plotly range slider as the line charts
+labels every B bar with its score range, and the same custom slider as the line charts
 zooms the graph horizontally only (the y axes stay fixed). The payload is tiny, so it loads on
 its own and again when the backend is switched.
 
