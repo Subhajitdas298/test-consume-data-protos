@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
-import type { Layout, PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
+import type { Layout, PlotlyHTMLElement, PlotRelayoutEvent, RangeSlider } from 'plotly.js'
 
 import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
-import RangeScrollbar from './RangeScrollbar'
 
 export const MAX_SCORE = 1000
 
@@ -16,7 +15,7 @@ const alpha = (color: string, a: number) => (color.startsWith('#') ? `${color}${
 // rather than spanning its edges.
 const BAR_WIDTH = 0.2
 
-const MARGIN = { t: 40, r: 72, b: 96, l: 72 }
+const MARGIN = { t: 40, r: 72, b: 48, l: 72 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString()
 
@@ -50,11 +49,11 @@ export default function BucketChart({
   const ref = useRef<HTMLDivElement>(null)
   const [plotly, setPlotly] = useState<PlotlyModule | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [zoom, setZoom] = useState<[number, number]>([0, MAX_SCORE])
 
   const textColor = theme.palette.text.primary
   const gridColor = theme.palette.divider
   const areaColor = theme.palette.primary.main
+  const paperColor = theme.palette.background.paper
   // Dark blue; lightened in dark mode so the bars stay visible on a dark background.
   const barColor = theme.palette.mode === 'dark' ? '#5b8def' : '#0b2e75'
 
@@ -173,6 +172,17 @@ export default function BucketChart({
             tickfont: { size: 9 },
             gridcolor: gridColor,
             zerolinecolor: gridColor,
+            rangeslider: {
+              visible: true,
+              bgcolor: paperColor,
+              bordercolor: gridColor,
+              thickness: 0.1,
+              // The preview always shows the whole score range at full scale, whatever the
+              // plot is zoomed to.
+              range: [0, MAX_SCORE],
+              // `yaxis` is supported by Plotly but missing from @types/plotly.js.
+              yaxis: { rangemode: 'fixed', range: [0, top] },
+            } as Partial<RangeSlider>,
             showspikes: true,
             spikemode: 'across',
             spikethickness: 1,
@@ -202,7 +212,7 @@ export default function BucketChart({
       .then(
         () => {
           setError(null)
-          // Keep the scrollbar in step with zoom/reset done in the plot itself.
+          // Zooming (box, range slider, reset) rescales the y axes to the visible buckets.
           const gd = el as unknown as PlotlyHTMLElement
           const fitY = (lo: number, hi: number) => {
             const t = yTop(coarse, fine, lo, hi)
@@ -213,22 +223,19 @@ export default function BucketChart({
             const lo = event['xaxis.range[0]']
             const hi = event['xaxis.range[1]']
             if (typeof lo === 'number' && typeof hi === 'number') {
-              setZoom([lo, hi])
               fitY(lo, hi)
             } else if (Array.isArray(event['xaxis.range'])) {
               const [from, to] = event['xaxis.range'] as number[]
-              setZoom([from, to])
               fitY(from, to)
             }
             else if (event['xaxis.autorange']) {
-              setZoom([0, MAX_SCORE])
               fitY(0, MAX_SCORE)
             }
           })
         },
         (err: unknown) => setError(errorMessage(err)),
       )
-  }, [plotly, coarse, fine, height, textColor, gridColor, areaColor, barColor])
+  }, [plotly, coarse, fine, height, textColor, gridColor, areaColor, barColor, paperColor])
 
   useEffect(() => {
     const el = ref.current
@@ -239,22 +246,6 @@ export default function BucketChart({
       }
     }
   }, [plotly])
-
-  const scroll = useCallback(
-    ([lo, hi]: [number, number]) => {
-      setZoom([lo, hi])
-      const el = ref.current
-      if (plotly && el) {
-        const t = yTop(coarse, fine, lo, hi)
-        void plotly.relayout(el, {
-          'xaxis.range': [lo, hi],
-          'yaxis.range': [0, t],
-          'yaxis2.range': [0, t / 10],
-        } as Partial<Layout>)
-      }
-    },
-    [plotly, coarse, fine],
-  )
 
   return (
     <>
@@ -269,16 +260,6 @@ export default function BucketChart({
         </Box>
       )}
       <div ref={ref} />
-      {plotly && !error && (
-        <RangeScrollbar
-          values={fine}
-          domain={MAX_SCORE}
-          range={zoom}
-          onChange={scroll}
-          left={MARGIN.l}
-          right={MARGIN.r}
-        />
-      )}
     </>
   )
 }

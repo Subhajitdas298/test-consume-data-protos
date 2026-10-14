@@ -58,9 +58,9 @@ is the left one divided by ten (counts per 10 scores vs per 100), so a bar that 
 the step is above its expected value. Plotly's gl2d bundle has no `bar` trace, so the bars are
 drawn as filled rectangles. Hovering shows one tooltip with both series (B observed, A expected
 for the containing 100-score bucket, A per 10 scores, and B's difference from expected), the x axis
-labels every B bar with its score range, and the same `RangeScrollbar` as the line charts
-zooms the whole graph (the y axes rescale to the visible buckets); plot zoom and double-click
-reset stay in sync with it. The payload is tiny, so it loads on its own and again when the
+labels every B bar with its score range, and Plotly's built-in range slider (fixed to the
+whole score range, showing both series) zooms the whole graph; whether zoomed by the slider or
+by a box drag, the y axes rescale to the visible buckets, and double-click resets. The payload is tiny, so it loads on its own and again when the
 backend is switched.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
