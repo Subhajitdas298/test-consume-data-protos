@@ -26,17 +26,14 @@ const FIELDS = 'abcdefghijklmnopqrstuvwxyz'.split('') as Field[]
 
 const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
 
-// Each library is ~1 MB, so it only loads when its chart is first rendered.
-const EChart = lazy(() => import('../components/EChart'))
+// Plotly is ~1.5 MB, so it only loads when a chart is first rendered.
 const PlotlyChart = lazy(() => import('../components/PlotlyChart'))
 
-type Mode = 'echarts-webgl' | 'echarts-canvas' | 'plotly-webgl' | 'plotly-svg'
+type Mode = 'webgl' | 'svg'
 
 const MODES: { mode: Mode; label: string }[] = [
-  { mode: 'echarts-webgl', label: 'ECharts WebGL' },
-  { mode: 'echarts-canvas', label: 'ECharts Canvas' },
-  { mode: 'plotly-webgl', label: 'Plotly WebGL' },
-  { mode: 'plotly-svg', label: 'Plotly SVG' },
+  { mode: 'webgl', label: 'WebGL' },
+  { mode: 'svg', label: 'SVG' },
 ]
 
 const SAMPLE_SIZES = [
@@ -66,10 +63,10 @@ export default function DataVisualizer({
 
   // Asked of the backend, which returns only the first N values.
   const [sampleSize, setSampleSize] = useState(1_000_000)
-  const [renderer, setRenderer] = useState<Mode>('echarts-webgl')
+  const [renderer, setRenderer] = useState<Mode>('webgl')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
   // values array it was started with, so a toggle, day/field change or reload
-  // unmounts it (disposing the ECharts instance) instead of updating it.
+  // unmounts it (purging Plotly) instead of updating it.
   const [shown, setShown] = useState<{ id: number; renderer: Mode; values: number[] } | null>(null)
 
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
@@ -213,19 +210,7 @@ export default function DataVisualizer({
 
       {shown && (
         <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
-          {shown.renderer.startsWith('plotly') ? (
-            <PlotlyChart
-              key={shown.id}
-              values={shown.values}
-              renderer={shown.renderer === 'plotly-webgl' ? 'webgl' : 'svg'}
-            />
-          ) : (
-            <EChart
-              key={shown.id}
-              values={shown.values}
-              renderer={shown.renderer === 'echarts-webgl' ? 'webgl' : 'canvas'}
-            />
-          )}
+          <PlotlyChart key={shown.id} values={shown.values} renderer={shown.renderer} />
         </Suspense>
       )}
     </Page>

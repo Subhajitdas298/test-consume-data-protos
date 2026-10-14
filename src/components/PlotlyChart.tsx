@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
+import type { PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
+
+import RangeScrollbar from './RangeScrollbar'
 
 type PlotlyModule = typeof import('plotly.js-gl2d-dist-min').default
 
@@ -25,6 +28,8 @@ function loadPlotly(): Promise<PlotlyModule> {
 // segments anyway, so past this size the SVG chart falls back to linear.
 const MAX_SPLINE_POINTS = 100_000
 
+const MARGIN = { t: 16, r: 24, b: 48, l: 64 }
+
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 export type ChartRenderer = 'webgl' | 'svg'
@@ -46,7 +51,8 @@ export default function PlotlyChart({
   const textColor = theme.palette.text.primary
   const gridColor = theme.palette.divider
   const lineColor = theme.palette.primary.main
-  const paperColor = theme.palette.background.paper
+  const [range, setRange] = useState<[number, number]>([0, Math.max(values.length - 1, 1)])
+  const full = Math.max(values.length - 1, 1)
   const smooth = renderer === 'svg' && values.length <= MAX_SPLINE_POINTS
 
   useEffect(() => {
@@ -83,7 +89,8 @@ export default function PlotlyChart({
         {
           autosize: true,
           height,
-          margin: { t: 16, r: 24, b: 48, l: 64 },
+          margin: MARGIN,
+          uirevision: 'keep',
           paper_bgcolor: 'rgba(0,0,0,0)',
           plot_bgcolor: 'rgba(0,0,0,0)',
           font: { color: textColor },
@@ -94,7 +101,6 @@ export default function PlotlyChart({
             title: { text: 'step' },
             gridcolor: gridColor,
             zerolinecolor: gridColor,
-            rangeslider: { visible: true, bgcolor: paperColor, bordercolor: gridColor },
           },
           yaxis: { title: { text: 'recall' }, gridcolor: gridColor, zerolinecolor: gridColor },
         },
@@ -102,7 +108,17 @@ export default function PlotlyChart({
       )
       .then(
         () => {
-          if (!cancelled) setError(null)
+          if (cancelled) return
+          setError(null)
+          // Keep the scrollbar in step with every zoom/pan/reset done in the plot itself.
+          const gd = el as unknown as PlotlyHTMLElement
+          gd.removeAllListeners?.('plotly_relayout')
+          gd.on('plotly_relayout', (event: PlotRelayoutEvent) => {
+            const lo = event['xaxis.range[0]']
+            const hi = event['xaxis.range[1]']
+            if (typeof lo === 'number' && typeof hi === 'number') setRange([lo, hi])
+            else if (event['xaxis.autorange']) setRange([0, full])
+          })
         },
         (err: unknown) => {
           if (!cancelled) setError(errorMessage(err))
@@ -111,7 +127,7 @@ export default function PlotlyChart({
     return () => {
       cancelled = true
     }
-  }, [plotly, values, renderer, smooth, height, textColor, gridColor, lineColor, paperColor])
+  }, [plotly, values, renderer, smooth, height, textColor, gridColor, lineColor, full])
 
   useEffect(() => {
     const el = ref.current
@@ -127,6 +143,15 @@ export default function PlotlyChart({
     }
   }, [plotly])
 
+  const scroll = useCallback(
+    ([lo, hi]: [number, number]) => {
+      setRange([lo, hi])
+      const el = ref.current
+      if (plotly && el) void plotly.relayout(el, { 'xaxis.range': [lo, hi] })
+    },
+    [plotly],
+  )
+
   return (
     <>
       {error && (
@@ -140,6 +165,9 @@ export default function PlotlyChart({
         </Box>
       )}
       <div ref={ref} />
+      {plotly && !error && (
+        <RangeScrollbar values={values} range={range} onChange={scroll} left={MARGIN.l} right={MARGIN.r} />
+      )}
     </>
   )
 }

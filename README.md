@@ -28,18 +28,21 @@ Both routes start empty: pick a **Sample size** (first 10M / 1M / 100k / 10k val
 backend takes it as `?size=` and returns only that many) and press **Load data**.
 Switching backend clears the loaded data. Once data is loaded, the raw values for a
 selected day/field are plotted as a line chart, but never on their own: pick a renderer with the toggle and press **Render
-graph**. Data is always passed to the library untouched (no downsampling):
+graph**. Data is always passed to Plotly untouched (no downsampling):
 
-- **ECharts WebGL** (default) — `echarts-gl` `scatterGL`; ECharts has no WebGL line
-  series, so it draws points and cannot be smoothed.
-- **ECharts Canvas** — line series with `smooth: true`.
-- **Plotly WebGL** — `scattergl` lines (straight segments; Plotly's WebGL trace has no
-  spline mode).
-- **Plotly SVG** — `scatter` with Plotly's own `spline` line shape (only up to 100k
-  points; beyond that it's too slow, so larger series draw straight segments).
+- **WebGL** (default) — Plotly `scattergl` lines (straight segments; Plotly's WebGL trace has
+  no spline mode).
+- **SVG** — Plotly `scatter` with Plotly's own `spline` line shape (only up to 100k points;
+  beyond that it's too slow, so larger series draw straight segments).
 
-The chart is mounted only on demand and fully released (ECharts `dispose`, Plotly `purge` plus dropping its d3-bound data) whenever the renderer, day, field or
-data changes; each library loads lazily the first time it's used. While data
+Under the plot is a horizontal scrollbar (`RangeScrollbar`) in place of Plotly's built-in
+range slider, which can't draw a preview for WebGL traces: a thumbnail of the whole series
+(per-bucket min/max, one pass over the data) with a window you drag to pan, drag by its
+edges to zoom, or click the track to jump. It stays in sync with zooming, panning and
+double-click-reset done in the plot itself.
+
+The chart is mounted only on demand and fully released (Plotly `purge` plus dropping its d3-bound data) whenever the renderer, day, field or
+data changes; Plotly loads lazily the first time a chart is rendered. While data
 downloads, a progress bar shows MB received (the backends send the uncompressed size
 in an `X-Data-Length` header). The two pages share the same `DataVisualizer`
 component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function passed in
@@ -190,7 +193,7 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Apache ECharts (`echarts` Canvas, `echarts-gl` WebGL) and Plotly (`plotly.js-gl2d-dist-min`
-  `scattergl`) for the zoomable line charts, each lazy-loaded (`EChart`, `PlotlyChart`)
+- Plotly (`plotly.js-gl2d-dist-min`: WebGL `scattergl` and SVG `scatter`) for the zoomable
+  line chart, lazy-loaded (`PlotlyChart`) so it only loads when a chart is rendered
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
