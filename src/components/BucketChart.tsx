@@ -3,7 +3,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
-import type { Layout, PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
+import type { PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
 
 import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
 import RangeScrollbar from './RangeScrollbar'
@@ -20,15 +20,9 @@ const MARGIN = { t: 40, r: 72, b: 96, l: 72 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString()
 
-// Shared y extent (left axis units) for the buckets overlapping [lo, hi]: A's steps against B's
-// bars times ten, so zooming in rescales the heights instead of leaving them tiny.
-function yTop(coarse: number[], fine: number[], lo = 0, hi = MAX_SCORE) {
-  const visible = (counts: number[]) => {
-    const width = MAX_SCORE / counts.length
-    return counts.filter((_, i) => (i + 1) * width > lo && i * width < hi)
-  }
-  return Math.max(...visible(coarse), 10 * Math.max(...visible(fine), 0)) * 1.08
-}
+// Shared y extent (left axis units): A's steps against B's bars times ten. Fixed for the whole
+// score range: zooming is horizontal only.
+const yTop = (coarse: number[], fine: number[]) => Math.max(Math.max(...coarse), 10 * Math.max(...fine)) * 1.08
 
 const range = (i: number, n: number) => `${(i * MAX_SCORE) / n}\u2013${((i + 1) * MAX_SCORE) / n - 1}`
 
@@ -97,7 +91,7 @@ export default function BucketChart({
         el,
         [
           {
-            type: 'scatter',
+            type: 'scattergl',
             mode: 'lines',
             name: `A: ${coarse.length} buckets (${coarseWidth} scores each)`,
             x: [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE],
@@ -108,7 +102,7 @@ export default function BucketChart({
             hoverinfo: 'skip',
           },
           {
-            type: 'scatter',
+            type: 'scattergl',
             mode: 'lines',
             name: `B: ${fine.length} buckets (${fineWidth} scores each)`,
             x: barX,
@@ -122,7 +116,7 @@ export default function BucketChart({
           {
             // Invisible markers on the bar tops: with hovermode 'x' they make the tooltip follow
             // the nearest bar and report both series for that spot.
-            type: 'scatter',
+            type: 'scattergl',
             mode: 'markers',
             name: 'B values',
             showlegend: false,
@@ -204,25 +198,18 @@ export default function BucketChart({
           setError(null)
           // Keep the scrollbar in step with zoom/reset done in the plot itself.
           const gd = el as unknown as PlotlyHTMLElement
-          const fitY = (lo: number, hi: number) => {
-            const t = yTop(coarse, fine, lo, hi)
-            void plotly.relayout(el, { 'yaxis.range': [0, t], 'yaxis2.range': [0, t / 10] } as Partial<Layout>)
-          }
           gd.removeAllListeners?.('plotly_relayout')
           gd.on('plotly_relayout', (event: PlotRelayoutEvent) => {
             const lo = event['xaxis.range[0]']
             const hi = event['xaxis.range[1]']
             if (typeof lo === 'number' && typeof hi === 'number') {
               setZoom([lo, hi])
-              fitY(lo, hi)
             } else if (Array.isArray(event['xaxis.range'])) {
               const [from, to] = event['xaxis.range'] as number[]
               setZoom([from, to])
-              fitY(from, to)
             }
             else if (event['xaxis.autorange']) {
               setZoom([0, MAX_SCORE])
-              fitY(0, MAX_SCORE)
             }
           })
         },
@@ -244,16 +231,9 @@ export default function BucketChart({
     ([lo, hi]: [number, number]) => {
       setZoom([lo, hi])
       const el = ref.current
-      if (plotly && el) {
-        const t = yTop(coarse, fine, lo, hi)
-        void plotly.relayout(el, {
-          'xaxis.range': [lo, hi],
-          'yaxis.range': [0, t],
-          'yaxis2.range': [0, t / 10],
-        } as Partial<Layout>)
-      }
+      if (plotly && el) void plotly.relayout(el, { 'xaxis.range': [lo, hi] })
     },
-    [plotly, coarse, fine],
+    [plotly],
   )
 
   return (

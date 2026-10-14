@@ -9,15 +9,12 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select, { type SelectChangeEvent } from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import type { DateRecord } from '@subhajitdas298/test-data-protos'
 
 import { useRootData } from '../api/useRootData'
 import type { FetchResult, ProgressHandler } from '../api/dataClient'
 import Page from '../components/Page'
-import type { ChartRenderer } from '../components/PlotlyChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
@@ -29,11 +26,6 @@ const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
 
 // Plotly is ~1.5 MB, so it only loads when a chart is first rendered.
 const PlotlyChart = lazy(() => import('../components/PlotlyChart'))
-
-const RENDERERS: { renderer: ChartRenderer; label: string }[] = [
-  { renderer: 'webgl', label: 'WebGL' },
-  { renderer: 'svg', label: 'SVG' },
-]
 
 const SAMPLE_SIZES = [
   { count: 10_000_000, label: '10M' },
@@ -64,11 +56,10 @@ export default function DataVisualizer({
 
   // Asked of the backend, which serves the matching precomputed sample.
   const [sampleSize, setSampleSize] = useState(1_000_000)
-  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
-  // values array it was started with, so a toggle, day/field change or reload
+  // values array it was started with, so a day/field change or reload
   // unmounts it (purging Plotly) instead of updating it.
-  const [shown, setShown] = useState<{ id: number; renderer: ChartRenderer; values: number[] } | null>(null)
+  const [shown, setShown] = useState<{ id: number; values: number[] } | null>(null)
 
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
@@ -181,27 +172,10 @@ export default function DataVisualizer({
         <Button
           variant="contained"
           disabled={loading || values.length === 0}
-          onClick={() => setShown({ id: ++chartRuns, renderer, values })}
+          onClick={() => setShown({ id: ++chartRuns, values })}
         >
           Render graph
         </Button>
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={renderer}
-          aria-label="Chart renderer"
-          onChange={(_, next: ChartRenderer | null) => {
-            if (!next) return
-            setRenderer(next)
-            setShown(null)
-          }}
-        >
-          {RENDERERS.map(({ renderer, label }) => (
-            <ToggleButton key={renderer} value={renderer}>
-              {label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
         {values.length > 0 && (
           <Typography variant="body2" color="text.secondary">
             {values.length.toLocaleString()} points
@@ -211,7 +185,7 @@ export default function DataVisualizer({
 
       {shown && (
         <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
-          <PlotlyChart key={shown.id} values={shown.values} renderer={shown.renderer} />
+          <PlotlyChart key={shown.id} values={shown.values} />
         </Suspense>
       )}
     </Page>

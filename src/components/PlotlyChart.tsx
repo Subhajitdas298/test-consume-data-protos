@@ -8,25 +8,9 @@ import type { PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
 import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
 import RangeScrollbar from './RangeScrollbar'
 
-// Smooth curves are a Plotly SVG-trace feature (scattergl has no spline shape), and
-// their cost grows roughly linearly with point count: ~4 s at 100k points, ~35 s at 1M,
-// minutes at 10M. With many points per pixel a spline looks the same as straight
-// segments anyway, so past this size the SVG chart falls back to linear.
-const MAX_SPLINE_POINTS = 100_000
-
 const MARGIN = { t: 16, r: 24, b: 48, l: 64 }
 
-export type ChartRenderer = 'webgl' | 'svg'
-
-export default function PlotlyChart({
-  values,
-  renderer,
-  height = 500,
-}: {
-  values: number[]
-  renderer: ChartRenderer
-  height?: number
-}) {
+export default function PlotlyChart({ values, height = 500 }: { values: number[]; height?: number }) {
   const theme = useTheme()
   const ref = useRef<HTMLDivElement>(null)
   const [plotly, setPlotly] = useState<PlotlyModule | null>(null)
@@ -37,7 +21,6 @@ export default function PlotlyChart({
   const lineColor = theme.palette.primary.main
   const [range, setRange] = useState<[number, number]>([0, Math.max(values.length - 1, 1)])
   const full = Math.max(values.length - 1, 1)
-  const smooth = renderer === 'svg' && values.length <= MAX_SPLINE_POINTS
 
   useEffect(() => {
     let cancelled = false
@@ -63,10 +46,10 @@ export default function PlotlyChart({
         el,
         [
           {
-            type: renderer === 'webgl' ? 'scattergl' : 'scatter',
+            type: 'scattergl',
             mode: 'lines',
             y: values,
-            line: { color: lineColor, width: 1.5, shape: smooth ? 'spline' : 'linear', smoothing: 1.3 },
+            line: { color: lineColor, width: 1.5 },
             hovertemplate: 'step %{x}<br>recall %{y}<extra></extra>',
           },
         ],
@@ -111,19 +94,12 @@ export default function PlotlyChart({
     return () => {
       cancelled = true
     }
-  }, [plotly, values, renderer, smooth, height, textColor, gridColor, lineColor, full])
+  }, [plotly, values, height, textColor, gridColor, lineColor, full])
 
   useEffect(() => {
     const el = ref.current
     return () => {
-      if (plotly && el) {
-        // d3 binds the calculated points to the SVG nodes as __data__; drop them so a
-        // detached chart can't keep millions of point objects alive.
-        const nodes = Array.from(el.querySelectorAll<Element & { __data__?: unknown }>('*'))
-        plotly.purge(el)
-        for (const node of nodes) node.__data__ = undefined
-        el.replaceChildren()
-      }
+      if (plotly && el) plotly.purge(el)
     }
   }, [plotly])
 

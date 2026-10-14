@@ -27,13 +27,9 @@ a card per representation:
 Both routes start empty: pick a **Sample size** (first 10M / 1M / 100k / 10k values; the
 backend takes it as `?size=` and returns only that many) and press **Load data**.
 Switching backend clears the loaded data. Once data is loaded, the raw values for a
-selected day/field are plotted as a line chart, but never on their own: pick a renderer
-with the toggle and press **Render graph**. Data is always passed to Plotly untouched (no downsampling):
-
-- **WebGL** (default) — Plotly `scattergl` lines (straight segments; Plotly's WebGL trace has
-  no spline mode).
-- **SVG** — Plotly `scatter` with Plotly's own `spline` line shape (only up to 100k points;
-  beyond that it's too slow, so larger series draw straight segments).
+selected day/field are plotted as a WebGL line chart (Plotly `scattergl`, straight segments —
+the WebGL trace has no spline mode), but never on their own: press **Render graph**. Data is
+always passed to Plotly untouched (no downsampling).
 
 Under the plot is a horizontal scrollbar (`RangeScrollbar`) in place of Plotly's built-in
 range slider, which can't draw a preview for WebGL traces: a thumbnail of the whole series
@@ -53,13 +49,13 @@ A third route, **Score distribution** (`/#/distribution`), fetches `GET /api/buc
 synthetic fraud-model score distribution returned as two count arrays: `a`, 10 *expected*
 counts (100 scores each), and `b`, 100 *observed* counts (10 scores each) that follow the same
 curve with some noise and some buckets above their expected value. Both are overlaid on one
-chart over scores 0 to 1000: A as shaded steps and B as thin dark-blue bars, each centred on the middle of its 10-score bucket. The right axis
+chart over scores 0 to 1000: A as shaded steps and B as thin dark-blue bars, each centred on the middle of its 10-score bucket (all WebGL traces). The right axis
 is the left one divided by ten (counts per 10 scores vs per 100), so a bar that rises above
 the step is above its expected value. Plotly's gl2d bundle has no `bar` trace, so the bars are
 drawn as filled rectangles. Hovering shows one tooltip with both series (B observed, A expected
 for the containing 100-score bucket, A per 10 scores, and B's difference from expected), the x axis
 labels every B bar with its score range, and the same `RangeScrollbar` as the line charts
-zooms the whole graph (the y axes rescale to the visible buckets); plot zoom and double-click
+zooms the graph horizontally only (the y axes stay fixed); plot box-zoom and double-click
 reset stay in sync with it. The payload is tiny, so it loads on its own and again when the
 backend is switched.
 
@@ -207,7 +203,6 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Plotly (`plotly.js-gl2d-dist-min`: WebGL `scattergl` and SVG `scatter`) for the zoomable
-  line chart, lazy-loaded (`PlotlyChart`) so it only loads when a chart is rendered
+- Plotly (`plotly.js-gl2d-dist-min`, WebGL only) for the zoomable line chart, lazy-loaded (`PlotlyChart`) so it only loads when a chart is rendered
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
