@@ -87,9 +87,9 @@ export default function ScoreDistribution() {
       {data && (
         <>
           <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
-            Expected number of transactions per fraud-model score, over scores 0 to 1000. The
-            same distribution is overlaid at two resolutions: 10 buckets of 100 scores (shaded steps, A) and
-            100 buckets of 10 scores (bars, B).
+            Transactions per fraud-model score, over scores 0 to 1000. A (shaded steps): 10 expected
+            counts, 100 scores each. B (bars): 100 observed counts, 10 scores each. The right axis is the
+            left one divided by ten, so a bar above the step is above its expected value.
           </Typography>
           <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
             <BucketChart coarse={data.a} fine={data.b} />

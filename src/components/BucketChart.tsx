@@ -10,6 +10,9 @@ export const MAX_SCORE = 1000
 
 const alpha = (color: string, a: number) => (color.startsWith('#') ? `${color}${Math.round(a * 255).toString(16).padStart(2, '0')}` : color)
 
+// Fraction of a bucket left empty on each side of a bar.
+const BAR_GAP = 0.3
+
 const range = (i: number, n: number) => `${(i * MAX_SCORE) / n}\u2013${((i + 1) * MAX_SCORE) / n - 1}`
 
 /**
@@ -34,7 +37,8 @@ export default function BucketChart({
   const textColor = theme.palette.text.primary
   const gridColor = theme.palette.divider
   const areaColor = theme.palette.primary.main
-  const barColor = theme.palette.warning.main
+  // Dark blue; lightened in dark mode so the bars stay visible on a dark background.
+  const barColor = theme.palette.mode === 'dark' ? '#5b8def' : '#0b2e75'
 
   useEffect(() => {
     let cancelled = false
@@ -54,6 +58,9 @@ export default function BucketChart({
   useEffect(() => {
     const el = ref.current
     if (!plotly || !el) return
+    // A's step is the expected count per 100 scores, B's bars are counts per 10 scores, so
+    // the right axis is the left one divided by ten: a bar above the step is above expectation.
+    const top = Math.max(Math.max(...coarse), 10 * Math.max(...fine)) * 1.08
     const coarseWidth = MAX_SCORE / coarse.length
     const fineWidth = MAX_SCORE / fine.length
     // The gl2d bundle has no `bar` trace, so the bars are one trace of closed rectangles
@@ -61,8 +68,8 @@ export default function BucketChart({
     const barX: (number | null)[] = []
     const barY: (number | null)[] = []
     fine.forEach((count, i) => {
-      const x0 = i * fineWidth + fineWidth * 0.05
-      const x1 = (i + 1) * fineWidth - fineWidth * 0.05
+      const x0 = i * fineWidth + fineWidth * BAR_GAP
+      const x1 = (i + 1) * fineWidth - fineWidth * BAR_GAP
       barX.push(x0, x0, x1, x1, x0, null)
       barY.push(0, count, count, 0, 0, null)
     })
@@ -91,7 +98,7 @@ export default function BucketChart({
             line: { color: barColor, width: 1 },
             yaxis: 'y2',
             fill: 'toself',
-            fillcolor: alpha(barColor, 0.55),
+            fillcolor: alpha(barColor, 0.85),
             hoverinfo: 'skip',
           },
           {
@@ -128,19 +135,18 @@ export default function BucketChart({
           yaxis: {
             title: { text: 'transactions per 100 scores (A)', font: { color: areaColor } },
             tickfont: { color: areaColor },
-            rangemode: 'tozero',
+            range: [0, top],
             gridcolor: gridColor,
             zerolinecolor: gridColor,
             fixedrange: true,
           },
-          // B has ten times as many, ten times narrower buckets, so it gets its own scale
-          // (otherwise it would be a sliver at the bottom of A's axis).
+          // Same scale as the left axis, per 10 scores instead of per 100.
           yaxis2: {
             title: { text: 'transactions per 10 scores (B)', font: { color: barColor } },
             tickfont: { color: barColor },
             overlaying: 'y',
             side: 'right',
-            rangemode: 'tozero',
+            range: [0, top / 10],
             showgrid: false,
             fixedrange: true,
           },
