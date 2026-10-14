@@ -4,7 +4,7 @@ import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import type { RangeSlider } from 'plotly.js'
 
-import { errorMessage, loadBasicPlotly, type PlotlyModule } from './plotlyLoader'
+import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
 
 const MAX_SCORE = 1000
 
@@ -32,7 +32,7 @@ export default function BucketChart({
 
   useEffect(() => {
     let cancelled = false
-    loadBasicPlotly().then(
+    loadPlotly().then(
       (loaded) => {
         if (!cancelled) setPlotly(loaded)
       },

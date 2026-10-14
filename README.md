@@ -52,8 +52,8 @@ top bar toggle and both routes.
 A third route, **Score distribution** (`/#/distribution`), fetches `GET /api/buckets` — a
 synthetic fraud-model score distribution returned as two count arrays: `a`, 10 *expected*
 counts (100 scores each), and `b`, 100 *observed* counts (10 scores each) that follow the same
-curve with some noise and some buckets above their expected value. It is plain Plotly (the
-`plotly.js-basic-dist-min` bundle, lazy-loaded): two `bar` traces over scores 0 to 1000 — A as
+curve with some noise and some buckets above their expected value. It is plain Plotly (the full
+`plotly.js-dist` bundle, lazy-loaded): two `bar` traces over scores 0 to 1000 — A as
 wide bars, B as thin dark-blue bars centred on their buckets on a second y axis that is the
 left one divided by ten, so a thin bar above the top of a wide one is above its expected value.
 It uses the unified hover (one tooltip with both series), a tick label per B bar, and Plotly's
@@ -204,7 +204,8 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Plotly (`plotly.js-gl2d-dist-min`: WebGL `scattergl` and SVG `scatter`) for the zoomable
-  line chart, lazy-loaded (`PlotlyChart`) so it only loads when a chart is rendered
+- Plotly (the full `plotly.js-dist` bundle, ~4.7 MB / ~1.4 MB gzipped, lazy-loaded so it only
+  loads when a chart is rendered): WebGL `scattergl` and SVG `scatter` for the zoomable line
+  chart (`PlotlyChart`) and `bar` traces for the score distribution (`BucketChart`)
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
