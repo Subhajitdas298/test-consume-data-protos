@@ -29,7 +29,7 @@ function envelope(values: number[]) {
     if (l < min) min = l
     if (h > max) max = h
   }
-  return { lo, hi, min, max }
+  return { lo, hi, min, max, single: size === 1 }
 }
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
@@ -39,7 +39,8 @@ type Drag = { mode: 'move' | 'left' | 'right'; startX: number; lo: number; hi: n
 /**
  * Horizontal scrollbar for a series: a thumbnail of the whole series with a draggable
  * window. Drag the window to pan, drag its edges to zoom, click the track to jump.
- * `range` and `onChange` are in index units (0 .. values.length - 1).
+ * `range` and `onChange` are in the chart's x units: 0 .. `domain`, which defaults to the
+ * index range of `values` (0 .. values.length - 1).
  */
 export default function RangeScrollbar({
   values,
@@ -47,12 +48,14 @@ export default function RangeScrollbar({
   onChange,
   left,
   right,
+  domain,
 }: {
   values: number[]
   range: [number, number]
   onChange: (range: [number, number]) => void
   left: number
   right: number
+  domain?: number
 }) {
   const theme = useTheme()
   const trackRef = useRef<HTMLDivElement>(null)
@@ -61,7 +64,7 @@ export default function RangeScrollbar({
   const frame = useRef(0)
   const [width, setWidth] = useState(0)
 
-  const max = Math.max(values.length - 1, 1)
+  const max = domain ?? Math.max(values.length - 1, 1)
   const env = useMemo(() => envelope(values), [values])
   const lo = clamp(range[0] / max)
   const hi = clamp(range[1] / max)
@@ -92,7 +95,13 @@ export default function RangeScrollbar({
     const x = (b: number) => (n === 1 ? 0 : (b / (n - 1)) * width)
     ctx.beginPath()
     for (let b = 0; b < n; b++) ctx.lineTo(x(b), y(env.hi[b]))
-    for (let b = n - 1; b >= 0; b--) ctx.lineTo(x(b), y(env.lo[b]))
+    // One point per bucket has no min/max band, so fill down to the baseline instead.
+    if (env.single) {
+      ctx.lineTo(x(n - 1), HEIGHT)
+      ctx.lineTo(x(0), HEIGHT)
+    } else {
+      for (let b = n - 1; b >= 0; b--) ctx.lineTo(x(b), y(env.lo[b]))
+    }
     ctx.closePath()
     ctx.fillStyle = theme.palette.primary.main
     ctx.globalAlpha = 0.55

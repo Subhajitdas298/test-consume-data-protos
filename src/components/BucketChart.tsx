@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
+import type { Layout, PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
 
 import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
+import RangeScrollbar from './RangeScrollbar'
 
 export const MAX_SCORE = 1000
 
@@ -13,6 +15,20 @@ const alpha = (color: string, a: number) => (color.startsWith('#') ? `${color}${
 // Bars are thin and centred on the middle of their bucket (as a fraction of the bucket width),
 // rather than spanning its edges.
 const BAR_WIDTH = 0.2
+
+const MARGIN = { t: 40, r: 72, b: 96, l: 72 }
+
+const fmt = (n: number) => Math.round(n).toLocaleString()
+
+// Shared y extent (left axis units) for the buckets overlapping [lo, hi]: A's steps against B's
+// bars times ten, so zooming in rescales the heights instead of leaving them tiny.
+function yTop(coarse: number[], fine: number[], lo = 0, hi = MAX_SCORE) {
+  const visible = (counts: number[]) => {
+    const width = MAX_SCORE / counts.length
+    return counts.filter((_, i) => (i + 1) * width > lo && i * width < hi)
+  }
+  return Math.max(...visible(coarse), 10 * Math.max(...visible(fine), 0)) * 1.08
+}
 
 const range = (i: number, n: number) => `${(i * MAX_SCORE) / n}\u2013${((i + 1) * MAX_SCORE) / n - 1}`
 
@@ -24,7 +40,7 @@ const range = (i: number, n: number) => `${(i * MAX_SCORE) / n}\u2013${((i + 1) 
 export default function BucketChart({
   coarse,
   fine,
-  height = 440,
+  height = 520,
 }: {
   coarse: number[]
   fine: number[]
@@ -34,6 +50,7 @@ export default function BucketChart({
   const ref = useRef<HTMLDivElement>(null)
   const [plotly, setPlotly] = useState<PlotlyModule | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [zoom, setZoom] = useState<[number, number]>([0, MAX_SCORE])
 
   const textColor = theme.palette.text.primary
   const gridColor = theme.palette.divider
@@ -61,7 +78,7 @@ export default function BucketChart({
     if (!plotly || !el) return
     // A's step is the expected count per 100 scores, B's bars are counts per 10 scores, so
     // the right axis is the left one divided by ten: a bar above the step is above expectation.
-    const top = Math.max(Math.max(...coarse), 10 * Math.max(...fine)) * 1.08
+    const top = yTop(coarse, fine)
     const coarseWidth = MAX_SCORE / coarse.length
     const fineWidth = MAX_SCORE / fine.length
     // The gl2d bundle has no `bar` trace, so the bars are one trace of closed rectangles
@@ -88,8 +105,7 @@ export default function BucketChart({
             line: { color: areaColor, width: 1.5, shape: 'hv' },
             fill: 'tozeroy',
             fillcolor: alpha(areaColor, 0.3),
-            customdata: [...coarse.map((_, i) => range(i, coarse.length)), ''],
-            hovertemplate: 'A, score %{customdata}<br>%{y:,} transactions<extra></extra>',
+            hoverinfo: 'skip',
           },
           {
             type: 'scatter',
@@ -104,6 +120,8 @@ export default function BucketChart({
             hoverinfo: 'skip',
           },
           {
+            // Invisible markers on the bar tops: with hovermode 'x' they make the tooltip follow
+            // the nearest bar and report both series for that spot.
             type: 'scatter',
             mode: 'markers',
             name: 'B values',
@@ -112,27 +130,53 @@ export default function BucketChart({
             x: fine.map((_, i) => (i + 0.5) * fineWidth),
             y: fine,
             marker: { color: barColor, size: 8, opacity: 0 },
-            customdata: fine.map((_, i) => range(i, fine.length)),
-            hovertemplate: 'B, score %{customdata}<br>%{y:,} transactions<extra></extra>',
+            customdata: fine.map((count, i) => {
+              const coarseIndex = Math.floor((i * fineWidth) / coarseWidth)
+              const expected = coarse[coarseIndex] / (coarseWidth / fineWidth)
+              const diff = ((count - expected) / expected) * 100
+              return [
+                range(i, fine.length),
+                fmt(expected),
+                range(coarseIndex, coarse.length),
+                fmt(coarse[coarseIndex]),
+                `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`,
+              ]
+            }),
+            hovertemplate:
+              '<b>score %{customdata[0]}</b><br>' +
+              'B observed: <b>%{y:,}</b><br>' +
+              'A expected (%{customdata[2]}): <b>%{customdata[3]}</b><br>' +
+              'A per 10 scores: %{customdata[1]}<br>' +
+              'B vs expected: %{customdata[4]}<extra></extra>',
           },
         ],
         {
           autosize: true,
           height,
-          margin: { t: 40, r: 72, b: 48, l: 72 },
-          hovermode: 'closest',
+          margin: MARGIN,
+          hovermode: 'x',
+          hoverdistance: -1,
+          uirevision: 'keep',
           legend: { orientation: 'h', x: 0, y: 1.1 },
           paper_bgcolor: 'rgba(0,0,0,0)',
           plot_bgcolor: 'rgba(0,0,0,0)',
           font: { color: textColor },
-          dragmode: false,
+          dragmode: 'zoom',
           xaxis: {
-            title: { text: 'score' },
+            title: { text: 'score', standoff: 8 },
             range: [0, MAX_SCORE],
-            dtick: 100,
+            // One label per B bar, at the bar's middle.
+            tickmode: 'array',
+            tickvals: fine.map((_, i) => (i + 0.5) * fineWidth),
+            ticktext: fine.map((_, i) => range(i, fine.length)),
+            tickangle: -90,
+            tickfont: { size: 9 },
             gridcolor: gridColor,
             zerolinecolor: gridColor,
-            fixedrange: true,
+            showspikes: true,
+            spikemode: 'across',
+            spikethickness: 1,
+            spikecolor: gridColor,
           },
           yaxis: {
             title: { text: 'transactions per 100 scores (A)', font: { color: areaColor } },
@@ -156,7 +200,32 @@ export default function BucketChart({
         { responsive: true, displaylogo: false, displayModeBar: false },
       )
       .then(
-        () => setError(null),
+        () => {
+          setError(null)
+          // Keep the scrollbar in step with zoom/reset done in the plot itself.
+          const gd = el as unknown as PlotlyHTMLElement
+          const fitY = (lo: number, hi: number) => {
+            const t = yTop(coarse, fine, lo, hi)
+            void plotly.relayout(el, { 'yaxis.range': [0, t], 'yaxis2.range': [0, t / 10] } as Partial<Layout>)
+          }
+          gd.removeAllListeners?.('plotly_relayout')
+          gd.on('plotly_relayout', (event: PlotRelayoutEvent) => {
+            const lo = event['xaxis.range[0]']
+            const hi = event['xaxis.range[1]']
+            if (typeof lo === 'number' && typeof hi === 'number') {
+              setZoom([lo, hi])
+              fitY(lo, hi)
+            } else if (Array.isArray(event['xaxis.range'])) {
+              const [from, to] = event['xaxis.range'] as number[]
+              setZoom([from, to])
+              fitY(from, to)
+            }
+            else if (event['xaxis.autorange']) {
+              setZoom([0, MAX_SCORE])
+              fitY(0, MAX_SCORE)
+            }
+          })
+        },
         (err: unknown) => setError(errorMessage(err)),
       )
   }, [plotly, coarse, fine, height, textColor, gridColor, areaColor, barColor])
@@ -171,6 +240,22 @@ export default function BucketChart({
     }
   }, [plotly])
 
+  const scroll = useCallback(
+    ([lo, hi]: [number, number]) => {
+      setZoom([lo, hi])
+      const el = ref.current
+      if (plotly && el) {
+        const t = yTop(coarse, fine, lo, hi)
+        void plotly.relayout(el, {
+          'xaxis.range': [lo, hi],
+          'yaxis.range': [0, t],
+          'yaxis2.range': [0, t / 10],
+        } as Partial<Layout>)
+      }
+    },
+    [plotly, coarse, fine],
+  )
+
   return (
     <>
       {error && (
@@ -184,6 +269,16 @@ export default function BucketChart({
         </Box>
       )}
       <div ref={ref} />
+      {plotly && !error && (
+        <RangeScrollbar
+          values={fine}
+          domain={MAX_SCORE}
+          range={zoom}
+          onChange={scroll}
+          left={MARGIN.l}
+          right={MARGIN.r}
+        />
+      )}
     </>
   )
 }
