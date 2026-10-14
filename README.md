@@ -31,8 +31,9 @@ selected day/field are plotted as a WebGL line chart (Plotly `scattergl`, straig
 the WebGL trace has no spline mode), but never on their own: press **Render graph**. Data is
 always passed to Plotly untouched (no downsampling).
 
-Under the plot is a horizontal scrollbar (`RangeScrollbar`) in place of Plotly's built-in
-range slider, which can't draw a preview for WebGL traces: a thumbnail of the whole series
+Under the plot is a horizontal scrollbar (`RangeScrollbar`), styled after Plotly's built-in
+range slider (dark mask over the unselected part, small white outlined handles), in place of it:
+the built-in one can't draw a preview for WebGL traces, so this draws: a thumbnail of the whole series
 (per-bucket min/max, one pass over the data) with a window you drag to pan, drag by its
 edges to zoom, or click the track to jump. It stays in sync with zooming, panning and
 double-click-reset done in the plot itself.

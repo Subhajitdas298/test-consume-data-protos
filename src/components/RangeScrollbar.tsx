@@ -3,8 +3,13 @@ import Box from '@mui/material/Box'
 import { useTheme } from '@mui/material/styles'
 
 const BUCKETS = 800
-const HEIGHT = 56
-const HANDLE = 10
+// Look and feel copied from Plotly's own range slider (components/rangeslider/constants):
+// masks over the unselected part, a 4px white handle with a 1px #444 outline at half the track
+// height, and a 10px grab area around each edge.
+const HEIGHT = 48
+const HANDLE_WIDTH = 4
+const GRAB_WIDTH = 10
+const MASK = 'rgba(0,0,0,0.4)'
 
 // Per-bucket min/max of the series: the thumbnail behind the scrollbar. One pass over the
 // data; Plotly's own range slider can't draw this for WebGL traces.
@@ -104,7 +109,6 @@ export default function RangeScrollbar({
     }
     ctx.closePath()
     ctx.fillStyle = theme.palette.primary.main
-    ctx.globalAlpha = 0.55
     ctx.fill()
   }, [env, width, theme.palette.primary.main])
 
@@ -148,17 +152,37 @@ export default function RangeScrollbar({
     emit(nl, nl + span)
   }
 
-  const shade = theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.7)'
-  const grip = {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: HANDLE,
-    cursor: 'ew-resize',
-    bgcolor: 'primary.main',
-    opacity: 0.85,
-    touchAction: 'none',
-  } as const
+  const edge = (mode: 'left' | 'right', at: number) => (
+    <Box
+      onPointerDown={begin(mode)}
+      onPointerMove={move}
+      onPointerUp={end}
+      onPointerCancel={end}
+      sx={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: `calc(${at * 100}% - ${GRAB_WIDTH / 2}px)`,
+        width: GRAB_WIDTH,
+        cursor: 'col-resize',
+        touchAction: 'none',
+      }}
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '25%',
+          height: '50%',
+          left: (GRAB_WIDTH - HANDLE_WIDTH) / 2,
+          width: HANDLE_WIDTH,
+          boxSizing: 'border-box',
+          bgcolor: '#fff',
+          border: '1px solid #444',
+          borderRadius: '1px',
+        }}
+      />
+    </Box>
+  )
 
   return (
     <Box sx={{ ml: `${left}px`, mr: `${right}px`, mt: 0.5, mb: 1 }}>
@@ -171,22 +195,11 @@ export default function RangeScrollbar({
         aria-valuemax={100}
         aria-valuenow={Math.round(lo * 100)}
         onPointerDown={jump}
-        sx={{
-          position: 'relative',
-          height: HEIGHT,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1,
-          overflow: 'hidden',
-          bgcolor: 'background.paper',
-          cursor: 'pointer',
-          userSelect: 'none',
-          touchAction: 'none',
-        }}
+        sx={{ position: 'relative', height: HEIGHT, cursor: 'pointer', userSelect: 'none', touchAction: 'none' }}
       >
         <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: HEIGHT }} />
-        <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${lo * 100}%`, bgcolor: shade }} />
-        <Box sx={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: `${(1 - hi) * 100}%`, bgcolor: shade }} />
+        <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${lo * 100}%`, bgcolor: MASK }} />
+        <Box sx={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: `${(1 - hi) * 100}%`, bgcolor: MASK }} />
         <Box
           onPointerDown={begin('move')}
           onPointerMove={move}
@@ -198,29 +211,12 @@ export default function RangeScrollbar({
             bottom: 0,
             left: `${lo * 100}%`,
             width: `${(hi - lo) * 100}%`,
-            minWidth: 2 * HANDLE,
-            border: 2,
-            borderColor: 'primary.main',
-            cursor: 'grab',
+            cursor: 'ew-resize',
             touchAction: 'none',
-            boxSizing: 'border-box',
           }}
-        >
-          <Box
-            onPointerDown={begin('left')}
-            onPointerMove={move}
-            onPointerUp={end}
-            onPointerCancel={end}
-            sx={{ ...grip, left: -2 }}
-          />
-          <Box
-            onPointerDown={begin('right')}
-            onPointerMove={move}
-            onPointerUp={end}
-            onPointerCancel={end}
-            sx={{ ...grip, right: -2 }}
-          />
-        </Box>
+        />
+        {edge('left', lo)}
+        {edge('right', hi)}
       </Box>
     </Box>
   )
