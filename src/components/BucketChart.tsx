@@ -3,7 +3,6 @@ import { useTheme } from '@mui/material/styles'
 import type { Data, Layout } from 'plotly.js'
 import Plot from 'react-plotly.js'
 
-import RangeScrollbar from './RangeScrollbar'
 import { relayoutRange } from './relayoutRange'
 
 const MAX_SCORE = 1000
@@ -14,7 +13,7 @@ const alpha = (color: string, a: number) => (color.startsWith('#') ? `${color}${
 // rather than spanning its edges.
 const BAR_WIDTH = 0.2
 
-const MARGIN = { t: 40, r: 72, b: 96, l: 72 }
+const MARGIN = { t: 40, r: 72, b: 48, l: 72 }
 
 type Range = [number, number]
 
@@ -42,7 +41,7 @@ export default function BucketChart({
 }) {
   const theme = useTheme()
   // Zoom is horizontal only, so the x range is the only state: the plot's own zoom/reset (via
-  // onRelayout) and the scrollbar both write it, and the layout is derived from it.
+  // onRelayout, including its range slider) writes it, and the layout is derived from it.
   const [x, setX] = useState<Range>([0, MAX_SCORE])
 
   const textColor = theme.palette.text.primary
@@ -75,6 +74,17 @@ export default function BucketChart({
         line: { color: areaColor, width: 1.5, shape: 'hv' },
         fill: 'tozeroy',
         fillcolor: alpha(areaColor, 0.3),
+        hoverinfo: 'skip',
+      },
+      {
+        // Plotly's range slider only previews SVG traces, so A's outline is drawn once more as one:
+        // it coincides with the WebGL trace above and gives the slider its preview.
+        type: 'scatter',
+        mode: 'lines',
+        x: [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE],
+        y: [...coarse, coarse[coarse.length - 1]],
+        line: { color: areaColor, width: 1.5, shape: 'hv' },
+        showlegend: false,
         hoverinfo: 'skip',
       },
       {
@@ -149,6 +159,7 @@ export default function BucketChart({
         tickfont: { size: 9 },
         gridcolor: gridColor,
         zerolinecolor: gridColor,
+        rangeslider: { visible: true, range: [0, MAX_SCORE] },
         showspikes: true,
         spikemode: 'across',
         spikethickness: 1,
@@ -188,14 +199,6 @@ export default function BucketChart({
         useResizeHandler
         style={{ width: '100%' }}
         onRelayout={onRelayout}
-      />
-      <RangeScrollbar
-        values={fine}
-        domain={MAX_SCORE}
-        range={x}
-        onChange={setX}
-        left={MARGIN.l}
-        right={MARGIN.r}
       />
     </>
   )

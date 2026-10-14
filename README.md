@@ -31,12 +31,12 @@ selected day/field are plotted as a WebGL line chart (Plotly `scattergl`, straig
 the WebGL trace has no spline mode), but never on their own: press **Render graph**. Data is
 always passed to Plotly untouched (no downsampling).
 
-Under the plot is a horizontal scrollbar (`RangeScrollbar`), styled after Plotly's built-in
-range slider (dark mask over the unselected part, small white outlined handles), in place of it:
-the built-in one can't draw a preview for WebGL traces, so this draws: a thumbnail of the whole series
-(per-bucket min/max, one pass over the data) with a window you drag to pan, drag by its
-edges to zoom, or click the track to jump. It stays in sync with zooming, panning and
-double-click-reset done in the plot itself.
+Under the plot is Plotly's own range slider (`xaxis.rangeslider`), so it looks and behaves
+exactly like Plotly's. Its preview only draws SVG traces, never `scattergl`, so each chart adds a
+small helper SVG trace for it: the per-bucket maxima of the series (at most 600 points, one pass
+over the data) on the line chart, and A's step outline on the score distribution. They coincide
+with what the WebGL traces already draw. Zoom state is kept in React and written by the plot's
+`onRelayout` events (box zoom, slider, double-click reset).
 
 The chart is mounted only on demand and fully released (Plotly `purge` plus dropping its
 d3-bound data) whenever the renderer, day, field or data changes; Plotly loads lazily the first time a chart is rendered. While data
@@ -55,10 +55,9 @@ is the left one divided by ten (counts per 10 scores vs per 100), so a bar that 
 the step is above its expected value. The bars are
 drawn as filled WebGL rectangles. Hovering shows one tooltip with both series (B observed, A expected
 for the containing 100-score bucket, A per 10 scores, and B's difference from expected), the x axis
-labels every B bar with its score range, and the same `RangeScrollbar` as the line charts
-zooms the graph horizontally only (the y axes stay fixed); plot box-zoom and double-click
-reset stay in sync with it. The payload is tiny, so it loads on its own and again when the
-backend is switched.
+labels every B bar with its score range, and the same Plotly range slider as the line charts
+zooms the graph horizontally only (the y axes stay fixed). The payload is tiny, so it loads on
+its own and again when the backend is switched.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
@@ -206,7 +205,6 @@ workflow and deploys to the storage account's static website URL.
 - MUI (Material UI) for the UI
 - Plotly via `plotly.js` and the official `react-plotly.js` component (WebGL traces only) for the
   zoomable line chart (`PlotlyChart`) and the score distribution (`BucketChart`), lazy-loaded so
-  the ~4.7 MB bundle only loads when a chart is rendered. Zoom state lives in React: the plot's
-  `onRelayout` and the custom `RangeScrollbar` both write it and the layout is derived from it
+  the ~4.7 MB bundle only loads when a chart is rendered
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
