@@ -1,133 +1,78 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import CircularProgress from '@mui/material/CircularProgress'
+import { useCallback, useMemo, useState } from 'react'
 import { useTheme } from '@mui/material/styles'
-import type { PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
+import type { Data, Layout } from 'plotly.js'
+import Plot from 'react-plotly.js'
 
-import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
 import RangeScrollbar from './RangeScrollbar'
+import { relayoutRange } from './relayoutRange'
 
 const MARGIN = { t: 16, r: 24, b: 48, l: 64 }
 
+type Range = [number, number]
+
+// react-plotly.js re-renders from props, so the zoom state lives here: the plot's own zoom/pan/
+// reset (via onRelayout) and the scrollbar both write it, and the layout is derived from it.
 export default function PlotlyChart({ values, height = 500 }: { values: number[]; height?: number }) {
   const theme = useTheme()
-  const ref = useRef<HTMLDivElement>(null)
-  const [plotly, setPlotly] = useState<PlotlyModule | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const textColor = theme.palette.text.primary
-  const gridColor = theme.palette.divider
-  const lineColor = theme.palette.primary.main
-  const [range, setRange] = useState<[number, number]>([0, Math.max(values.length - 1, 1)])
   const full = Math.max(values.length - 1, 1)
+  const [x, setX] = useState<Range>([0, full])
+  const [y, setY] = useState<Range | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    loadPlotly().then(
-      (loaded) => {
-        if (!cancelled) setPlotly(loaded)
+  const data = useMemo<Data[]>(
+    () => [
+      {
+        type: 'scattergl',
+        mode: 'lines',
+        y: values,
+        line: { color: theme.palette.primary.main, width: 1.5 },
+        hovertemplate: 'step %{x}<br>recall %{y}<extra></extra>',
       },
-      (err: unknown) => {
-        if (!cancelled) setError(errorMessage(err))
+    ],
+    [values, theme.palette.primary.main],
+  )
+
+  const layout = useMemo<Partial<Layout>>(
+    () => ({
+      autosize: true,
+      height,
+      margin: MARGIN,
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: theme.palette.text.primary },
+      hovermode: 'closest',
+      dragmode: 'zoom',
+      modebar: { bgcolor: 'rgba(0,0,0,0)', color: theme.palette.text.primary },
+      xaxis: { title: { text: 'step' }, gridcolor: theme.palette.divider, range: x },
+      yaxis: {
+        title: { text: 'recall' },
+        gridcolor: theme.palette.divider,
+        ...(y ? { range: y } : { autorange: true }),
       },
-    )
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    }),
+    [height, theme.palette.text.primary, theme.palette.divider, x, y],
+  )
 
-  useEffect(() => {
-    const el = ref.current
-    if (!plotly || !el) return
-    let cancelled = false
-    plotly
-      .react(
-        el,
-        [
-          {
-            type: 'scattergl',
-            mode: 'lines',
-            y: values,
-            line: { color: lineColor, width: 1.5 },
-            hovertemplate: 'step %{x}<br>recall %{y}<extra></extra>',
-          },
-        ],
-        {
-          autosize: true,
-          height,
-          margin: MARGIN,
-          uirevision: 'keep',
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-          font: { color: textColor },
-          hovermode: 'closest',
-          dragmode: 'zoom',
-          modebar: { bgcolor: 'rgba(0,0,0,0)', color: textColor, activecolor: lineColor },
-          xaxis: {
-            title: { text: 'step' },
-            gridcolor: gridColor,
-            zerolinecolor: gridColor,
-          },
-          yaxis: { title: { text: 'recall' }, gridcolor: gridColor, zerolinecolor: gridColor },
-        },
-        { responsive: true, displaylogo: false },
-      )
-      .then(
-        () => {
-          if (cancelled) return
-          setError(null)
-          // Keep the scrollbar in step with every zoom/pan/reset done in the plot itself.
-          const gd = el as unknown as PlotlyHTMLElement
-          gd.removeAllListeners?.('plotly_relayout')
-          gd.on('plotly_relayout', (event: PlotRelayoutEvent) => {
-            const lo = event['xaxis.range[0]']
-            const hi = event['xaxis.range[1]']
-            if (typeof lo === 'number' && typeof hi === 'number') setRange([lo, hi])
-            else if (event['xaxis.autorange']) setRange([0, full])
-          })
-        },
-        (err: unknown) => {
-          if (!cancelled) setError(errorMessage(err))
-        },
-      )
-    return () => {
-      cancelled = true
-    }
-  }, [plotly, values, height, textColor, gridColor, lineColor, full])
-
-  useEffect(() => {
-    const el = ref.current
-    return () => {
-      if (plotly && el) plotly.purge(el)
-    }
-  }, [plotly])
-
-  const scroll = useCallback(
-    ([lo, hi]: [number, number]) => {
-      setRange([lo, hi])
-      const el = ref.current
-      if (plotly && el) void plotly.relayout(el, { 'xaxis.range': [lo, hi] })
+  const onRelayout = useCallback(
+    (event: Record<string, unknown>) => {
+      const xr = relayoutRange(event, 'xaxis')
+      if (xr) setX(xr === 'auto' ? [0, full] : xr)
+      const yr = relayoutRange(event, 'yaxis')
+      if (yr) setY(yr === 'auto' ? null : yr)
     },
-    [plotly],
+    [full],
   )
 
   return (
     <>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          Failed to render chart: {error}
-        </Alert>
-      )}
-      {!plotly && !error && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
-      )}
-      <div ref={ref} />
-      {plotly && !error && (
-        <RangeScrollbar values={values} range={range} onChange={scroll} left={MARGIN.l} right={MARGIN.r} />
-      )}
+      <Plot
+        data={data}
+        layout={layout}
+        config={{ responsive: true, displaylogo: false }}
+        useResizeHandler
+        style={{ width: '100%' }}
+        onRelayout={onRelayout}
+      />
+      <RangeScrollbar values={values} range={x} onChange={setX} left={MARGIN.l} right={MARGIN.r} />
     </>
   )
 }

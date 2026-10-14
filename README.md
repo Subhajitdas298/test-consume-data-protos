@@ -51,8 +51,8 @@ counts (100 scores each), and `b`, 100 *observed* counts (10 scores each) that f
 curve with some noise and some buckets above their expected value. Both are overlaid on one
 chart over scores 0 to 1000: A as shaded steps and B as thin dark-blue bars, each centred on the middle of its 10-score bucket (all WebGL traces). The right axis
 is the left one divided by ten (counts per 10 scores vs per 100), so a bar that rises above
-the step is above its expected value. Plotly's gl2d bundle has no `bar` trace, so the bars are
-drawn as filled rectangles. Hovering shows one tooltip with both series (B observed, A expected
+the step is above its expected value. The bars are
+drawn as filled WebGL rectangles. Hovering shows one tooltip with both series (B observed, A expected
 for the containing 100-score bucket, A per 10 scores, and B's difference from expected), the x axis
 labels every B bar with its score range, and the same `RangeScrollbar` as the line charts
 zooms the graph horizontally only (the y axes stay fixed); plot box-zoom and double-click
@@ -203,6 +203,9 @@ workflow and deploys to the storage account's static website URL.
 - React Router (`HashRouter`) for the two routes (`/binary`, `/json`) plus the
   home screen — hash-based so it works on static hosting without server rewrites
 - MUI (Material UI) for the UI
-- Plotly (`plotly.js-gl2d-dist-min`, WebGL only) for the zoomable line chart, lazy-loaded (`PlotlyChart`) so it only loads when a chart is rendered
+- Plotly via `plotly.js` and the official `react-plotly.js` component (WebGL traces only) for the
+  zoomable line chart (`PlotlyChart`) and the score distribution (`BucketChart`), lazy-loaded so
+  the ~4.7 MB bundle only loads when a chart is rendered. Zoom state lives in React: the plot's
+  `onRelayout` and the custom `RangeScrollbar` both write it and the layout is derived from it
 - `@subhajitdas298/test-data-protos` + `@bufbuild/protobuf` for decoding the
   protobuf payload
