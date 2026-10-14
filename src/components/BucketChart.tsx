@@ -10,8 +10,9 @@ export const MAX_SCORE = 1000
 
 const alpha = (color: string, a: number) => (color.startsWith('#') ? `${color}${Math.round(a * 255).toString(16).padStart(2, '0')}` : color)
 
-// Fraction of a bucket left empty on each side of a bar.
-const BAR_GAP = 0.3
+// Bars are thin and centred on the middle of their bucket (as a fraction of the bucket width),
+// rather than spanning its edges.
+const BAR_WIDTH = 0.2
 
 const range = (i: number, n: number) => `${(i * MAX_SCORE) / n}\u2013${((i + 1) * MAX_SCORE) / n - 1}`
 
@@ -68,8 +69,9 @@ export default function BucketChart({
     const barX: (number | null)[] = []
     const barY: (number | null)[] = []
     fine.forEach((count, i) => {
-      const x0 = i * fineWidth + fineWidth * BAR_GAP
-      const x1 = (i + 1) * fineWidth - fineWidth * BAR_GAP
+      const middle = (i + 0.5) * fineWidth
+      const x0 = middle - (fineWidth * BAR_WIDTH) / 2
+      const x1 = middle + (fineWidth * BAR_WIDTH) / 2
       barX.push(x0, x0, x1, x1, x0, null)
       barY.push(0, count, count, 0, 0, null)
     })
@@ -107,7 +109,7 @@ export default function BucketChart({
             name: 'B values',
             showlegend: false,
             yaxis: 'y2',
-            x: fine.map((_, i) => i * fineWidth + fineWidth / 2),
+            x: fine.map((_, i) => (i + 0.5) * fineWidth),
             y: fine,
             marker: { color: barColor, size: 8, opacity: 0 },
             customdata: fine.map((_, i) => range(i, fine.length)),

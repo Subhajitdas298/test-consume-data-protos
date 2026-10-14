@@ -53,7 +53,7 @@ A third route, **Score distribution** (`/#/distribution`), fetches `GET /api/buc
 synthetic fraud-model score distribution returned as two count arrays: `a`, 10 *expected*
 counts (100 scores each), and `b`, 100 *observed* counts (10 scores each) that follow the same
 curve with some noise and some buckets above their expected value. Both are overlaid on one
-chart over scores 0 to 1000: A as shaded steps and B as sparse dark-blue bars. The right axis
+chart over scores 0 to 1000: A as shaded steps and B as thin dark-blue bars, each centred on the middle of its 10-score bucket. The right axis
 is the left one divided by ten (counts per 10 scores vs per 100), so a bar that rises above
 the step is above its expected value. Plotly's gl2d bundle has no `bar` trace, so the bars are
 drawn as filled rectangles. The payload is tiny, so it loads on its own and again when the
