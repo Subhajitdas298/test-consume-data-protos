@@ -67,6 +67,20 @@ export default function Home() {
         ))}
       </Stack>
 
+      <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+        <CardActionArea component={Link} to="/distribution" sx={{ p: 1 }}>
+          <CardContent>
+            <Typography variant="h6" component="h2" gutterBottom>
+              Score distribution
+            </Typography>
+            <Typography color="text.secondary">
+              Fetches /api/buckets (a fraud-model score distribution as two count arrays, 10 and
+              100 buckets) and plots both as bar charts over scores 0 to 1000.
+            </Typography>
+          </CardContent>
+        </CardActionArea>
+      </Card>
+
       <Card>
         <CardActionArea component={Link} to="/benchmark" sx={{ p: 1 }}>
           <CardContent>

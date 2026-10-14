@@ -49,6 +49,13 @@ component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function pass
 differs. Which backend to hit is app-wide state (`DataSourceContext`), shared by the
 top bar toggle and both routes.
 
+A third route, **Score distribution** (`/#/distribution`), fetches `GET /api/buckets` — a
+synthetic fraud-model score distribution returned as two count arrays — and plots both over
+scores 0 to 1000 as histograms (stepped areas, since Plotly's gl2d bundle has no `bar` trace):
+chart A has 10 buckets of 100 scores, chart B has 100 buckets of 10 scores (A's values are the
+sums of B's). The payload is tiny, so it loads on its own and again when the backend is
+switched.
+
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
 for any origin — matching their existing fully-open, unauthenticated API design.

@@ -78,3 +78,24 @@ export async function fetchRootDataJson(
   const elapsedMs = performance.now() - start
   return { root, elapsedMs, bytes: bytes.length }
 }
+
+export interface BucketsResult {
+  /** 10 counts: bucket i covers scores 100*i .. 100*i+99. */
+  a: number[]
+  /** 100 counts: bucket j covers scores 10*j .. 10*j+9. */
+  b: number[]
+  elapsedMs: number
+  bytes: number
+}
+
+export async function fetchBuckets(baseUrl: string): Promise<BucketsResult> {
+  const start = performance.now()
+  const url = `${baseUrl}/api/buckets`
+  const response = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!response.ok) {
+    throw new Error(`Request to ${url} failed: ${response.status} ${response.statusText}`)
+  }
+  const text = await response.text()
+  const { a, b } = JSON.parse(text) as { a: number[]; b: number[] }
+  return { a, b, elapsedMs: performance.now() - start, bytes: new TextEncoder().encode(text).length }
+}

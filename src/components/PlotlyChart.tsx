@@ -5,22 +5,8 @@ import CircularProgress from '@mui/material/CircularProgress'
 import { useTheme } from '@mui/material/styles'
 import type { PlotlyHTMLElement, PlotRelayoutEvent } from 'plotly.js'
 
+import { errorMessage, loadPlotly, type PlotlyModule } from './plotlyLoader'
 import RangeScrollbar from './RangeScrollbar'
-
-type PlotlyModule = typeof import('plotly.js-gl2d-dist-min').default
-
-let plotlyPromise: Promise<PlotlyModule> | undefined
-
-// Loaded lazily so the ~1.5 MB Plotly bundle only ships to the chart routes.
-function loadPlotly(): Promise<PlotlyModule> {
-  plotlyPromise ??= import('plotly.js-gl2d-dist-min')
-    .then((module) => module.default)
-    .catch((err: unknown) => {
-      plotlyPromise = undefined
-      throw err
-    })
-  return plotlyPromise
-}
 
 // Smooth curves are a Plotly SVG-trace feature (scattergl has no spline shape), and
 // their cost grows roughly linearly with point count: ~4 s at 100k points, ~35 s at 1M,
@@ -29,8 +15,6 @@ function loadPlotly(): Promise<PlotlyModule> {
 const MAX_SPLINE_POINTS = 100_000
 
 const MARGIN = { t: 16, r: 24, b: 48, l: 64 }
-
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 export type ChartRenderer = 'webgl' | 'svg'
 
