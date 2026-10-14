@@ -32,7 +32,7 @@ the WebGL trace has no spline mode), but never on their own: press **Render grap
 always passed to Plotly untouched (no downsampling).
 
 Under the plot is Plotly's own range slider (`xaxis.rangeslider`), so it looks and behaves
-exactly like Plotly's. Its preview only draws SVG traces, never `scattergl`, so each chart adds a
+exactly like Plotly's. Its preview only draws SVG traces, never `scattergl`, so each chart adds
 SVG helper traces for it: on the line chart the outline of the per-bucket min/max band (at most
 600 buckets, one pass over the data), and on the score distribution the filled shapes of both A and
 B, which are SVG traces with WebGL outlines drawn on top (so the slider previews both graphs). Zoom state is kept in React and written by the plot's
