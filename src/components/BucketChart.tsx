@@ -3,6 +3,7 @@ import { useTheme } from '@mui/material/styles'
 import type { Data, Layout } from 'plotly.js'
 import Plot from 'react-plotly.js'
 
+import RangeScrollbar, { type Layer } from './RangeScrollbar'
 import { relayoutRange } from './relayoutRange'
 
 const MAX_SCORE = 1000
@@ -13,7 +14,7 @@ const alpha = (color: string, a: number) => (color.startsWith('#') ? `${color}${
 // rather than spanning its edges.
 const BAR_WIDTH = 0.2
 
-const MARGIN = { t: 40, r: 72, b: 48, l: 72 }
+const MARGIN = { t: 40, r: 72, b: 96, l: 72 }
 
 type Range = [number, number]
 
@@ -41,7 +42,7 @@ export default function BucketChart({
 }) {
   const theme = useTheme()
   // Zoom is horizontal only, so the x range is the only state: the plot's own zoom/reset (via
-  // onRelayout, including its range slider) writes it, and the layout is derived from it.
+  // onRelayout) and the scrollbar both write it, and the layout is derived from it.
   const [x, setX] = useState<Range>([0, MAX_SCORE])
 
   const textColor = theme.palette.text.primary
@@ -64,25 +65,20 @@ export default function BucketChart({
       barX.push(x0, x0, x1, x1, x0, null)
       barY.push(0, count, count, 0, 0, null)
     })
-    const aX = [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE]
-    const aY = [...coarse, coarse[coarse.length - 1]]
     return [
-      // Plotly's range slider only previews SVG traces, never `scattergl`, so the filled shapes
-      // (and the legend entries) are SVG traces: the slider then previews both graphs. The WebGL
-      // traces draw the same outlines on top.
       {
-        type: 'scatter',
+        type: 'scattergl',
         mode: 'lines',
         name: `A: ${coarse.length} buckets (${coarseWidth} scores each)`,
-        x: aX,
-        y: aY,
+        x: [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE],
+        y: [...coarse, coarse[coarse.length - 1]],
         line: { color: areaColor, width: 1.5, shape: 'hv' },
         fill: 'tozeroy',
         fillcolor: alpha(areaColor, 0.3),
         hoverinfo: 'skip',
       },
       {
-        type: 'scatter',
+        type: 'scattergl',
         mode: 'lines',
         name: `B: ${fine.length} buckets (${fineWidth} scores each)`,
         x: barX,
@@ -91,25 +87,6 @@ export default function BucketChart({
         yaxis: 'y2',
         fill: 'toself',
         fillcolor: alpha(barColor, 0.85),
-        hoverinfo: 'skip',
-      },
-      {
-        type: 'scattergl',
-        mode: 'lines',
-        showlegend: false,
-        x: aX,
-        y: aY,
-        line: { color: areaColor, width: 1.5, shape: 'hv' },
-        hoverinfo: 'skip',
-      },
-      {
-        type: 'scattergl',
-        mode: 'lines',
-        showlegend: false,
-        x: barX,
-        y: barY,
-        line: { color: barColor, width: 1 },
-        yaxis: 'y2',
         hoverinfo: 'skip',
       },
       {
@@ -145,6 +122,15 @@ export default function BucketChart({
     ]
   }, [coarse, fine, areaColor, barColor])
 
+  // The thumbnail previews both graphs: A's steps and B's bars (B on the right axis, per 10 scores).
+  const layers = useMemo<Layer[]>(
+    () => [
+      { values: coarse, color: areaColor, kind: 'steps' },
+      { values: fine, color: barColor, kind: 'bars', scale: coarse.length > 0 ? fine.length / coarse.length : 1 },
+    ],
+    [coarse, fine, areaColor, barColor],
+  )
+
   const layout = useMemo<Partial<Layout>>(() => {
     // A's step is the expected count per 100 scores, B's bars are counts per 10 scores, so
     // the right axis is the left one divided by ten: a bar above the step is above expectation.
@@ -172,7 +158,6 @@ export default function BucketChart({
         tickfont: { size: 9 },
         gridcolor: gridColor,
         zerolinecolor: gridColor,
-        rangeslider: { visible: true, range: [0, MAX_SCORE] },
         showspikes: true,
         spikemode: 'across',
         spikethickness: 1,
@@ -212,6 +197,14 @@ export default function BucketChart({
         useResizeHandler
         style={{ width: '100%' }}
         onRelayout={onRelayout}
+      />
+      <RangeScrollbar
+        layers={layers}
+        domain={MAX_SCORE}
+        range={x}
+        onChange={setX}
+        left={MARGIN.l}
+        right={MARGIN.r}
       />
     </>
   )

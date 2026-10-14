@@ -31,12 +31,14 @@ selected day/field are plotted as a WebGL line chart (Plotly `scattergl`, straig
 the WebGL trace has no spline mode), but never on their own: press **Render graph**. Data is
 always passed to Plotly untouched (no downsampling).
 
-Under the plot is Plotly's own range slider (`xaxis.rangeslider`), so it looks and behaves
-exactly like Plotly's. Its preview only draws SVG traces, never `scattergl`, so each chart adds
-SVG helper traces for it: on the line chart the outline of the per-bucket min/max band (at most
-600 buckets, one pass over the data), and on the score distribution the filled shapes of both A and
-B, which are SVG traces with WebGL outlines drawn on top (so the slider previews both graphs). Zoom state is kept in React and written by the plot's
-`onRelayout` events (box zoom, slider, double-click reset).
+Under the plot is a horizontal slider (`RangeScrollbar`) that copies Plotly's range slider look
+and feel (dark mask over the unselected part, small white outlined handles), but is not Plotly's:
+Plotly's own slider can only preview SVG traces, never WebGL ones, and the only way to feed it
+was extra helper traces on the plot. This one is custom, so the plots themselves are left exactly
+as they are. Its thumbnail previews every graph in the chart: the line chart's min/max band
+(one pass over the data), and A's steps plus B's bars on the score distribution. Drag the window
+to pan, drag its edges to zoom, click the track to jump. Zoom state is kept in React and written
+by both the slider and the plot's `onRelayout` events (box zoom, double-click reset).
 
 The chart is mounted only on demand and fully released (Plotly `purge` plus dropping its
 d3-bound data) whenever the renderer, day, field or data changes; Plotly loads lazily the first time a chart is rendered. While data
