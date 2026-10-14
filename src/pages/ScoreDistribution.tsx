@@ -13,11 +13,6 @@ import { useDataSource } from '../context/useDataSource'
 // Plotly is ~1.5 MB, so it only loads when the charts are first shown.
 const BucketChart = lazy(() => import('../components/BucketChart'))
 
-const CHARTS = [
-  { key: 'a', title: 'Chart A: 10 buckets (100 scores each)' },
-  { key: 'b', title: 'Chart B: 100 buckets (10 scores each)' },
-] as const
-
 // The payload is a few hundred bytes, so unlike the big datasets it loads on its own
 // (and again whenever the backend is switched).
 export default function ScoreDistribution() {
@@ -93,17 +88,11 @@ export default function ScoreDistribution() {
         <>
           <Typography sx={{ mb: { xs: 1, sm: 2 } }}>
             Expected number of transactions per fraud-model score, over scores 0 to 1000. The
-            same distribution is shown at two resolutions.
+            same distribution is overlaid at two resolutions: 10 buckets of 100 scores (shaded steps, A) and
+            100 buckets of 10 scores (bars, B).
           </Typography>
           <Suspense fallback={<CircularProgress sx={{ display: 'block', mx: 'auto', my: 8 }} />}>
-            {CHARTS.map(({ key, title }) => (
-              <div key={key}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-                  {title}
-                </Typography>
-                <BucketChart counts={data[key]} />
-              </div>
-            ))}
+            <BucketChart coarse={data.a} fine={data.b} />
           </Suspense>
         </>
       )}

@@ -50,11 +50,11 @@ differs. Which backend to hit is app-wide state (`DataSourceContext`), shared by
 top bar toggle and both routes.
 
 A third route, **Score distribution** (`/#/distribution`), fetches `GET /api/buckets` — a
-synthetic fraud-model score distribution returned as two count arrays — and plots both over
-scores 0 to 1000 as histograms (stepped areas, since Plotly's gl2d bundle has no `bar` trace):
-chart A has 10 buckets of 100 scores, chart B has 100 buckets of 10 scores (A's values are the
-sums of B's). The payload is tiny, so it loads on its own and again when the backend is
-switched.
+synthetic fraud-model score distribution returned as two count arrays — and overlays both
+on one chart over scores 0 to 1000: A (10 buckets of 100 scores) as shaded steps and B (100
+buckets of 10 scores) as bars on a second y axis (A's values are the sums of B's). Plotly's
+gl2d bundle has no `bar` trace, so the bars are drawn as filled rectangles. The payload is
+tiny, so it loads on its own and again when the backend is switched.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
