@@ -7,50 +7,54 @@ export interface RequestStats {
   bytes: number
 }
 
-// Nothing is fetched until `load` is called. Data from a different fetcher (e.g. the other
-// backend) is dropped, and a response that arrives after a newer request is ignored.
-export function useRootData(fetcher: (onProgress: ProgressHandler, size?: number) => Promise<FetchResult>) {
-  const [root, setRoot] = useState<Root | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [progress, setProgress] = useState<Progress | null>(null)
-  const [stats, setStats] = useState<RequestStats | null>(null)
-  const latest = useRef(0)
+interface State {
+  // The fetcher the data belongs to: data from a different one (e.g. the other backend)
+  // is never exposed.
+  fetcher: unknown
+  root: Root | null
+  loading: boolean
+  error: string | null
+  progress: Progress | null
+  stats: RequestStats | null
+}
 
-  const [prevFetcher, setPrevFetcher] = useState(() => fetcher)
-  if (prevFetcher !== fetcher) {
-    latest.current++
-    setPrevFetcher(() => fetcher)
-    setRoot(null)
-    setStats(null)
-    setError(null)
-    setProgress(null)
-    setLoading(false)
-  }
+// Nothing is fetched until `load` is called, and a response that arrives after a newer
+// request (or after the fetcher changed) is ignored.
+export function useRootData(fetcher: (onProgress: ProgressHandler, size?: number) => Promise<FetchResult>) {
+  const [state, setState] = useState<State>({
+    fetcher,
+    root: null,
+    loading: false,
+    error: null,
+    progress: null,
+    stats: null,
+  })
+  const latest = useRef(0)
 
   const load = useCallback(
     async (size?: number) => {
       const id = ++latest.current
-      setLoading(true)
-      setError(null)
-      setProgress(null)
+      const update = (patch: Partial<State>) => {
+        if (id === latest.current) setState((prev) => ({ ...prev, ...patch, fetcher }))
+      }
+      setState({ fetcher, root: null, loading: true, error: null, progress: null, stats: null })
       try {
-        const { root, elapsedMs, bytes } = await fetcher((p) => {
-          if (id === latest.current) setProgress(p)
-        }, size)
-        if (id !== latest.current) return
-        setRoot(root)
-        setStats({ elapsedMs, bytes })
+        const { root, elapsedMs, bytes } = await fetcher((progress) => update({ progress }), size)
+        update({ root, stats: { elapsedMs, bytes }, loading: false })
       } catch (err) {
-        if (id !== latest.current) return
-        setError(err instanceof Error ? err.message : String(err))
-        setStats(null)
-      } finally {
-        if (id === latest.current) setLoading(false)
+        update({ error: err instanceof Error ? err.message : String(err), loading: false })
       }
     },
     [fetcher],
   )
 
-  return { root, loading, error, stats, progress, load }
+  const current = state.fetcher === fetcher
+  return {
+    root: current ? state.root : null,
+    loading: current && state.loading,
+    error: current ? state.error : null,
+    progress: current ? state.progress : null,
+    stats: current ? state.stats : null,
+    load,
+  }
 }

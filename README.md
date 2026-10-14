@@ -27,8 +27,8 @@ a card per representation:
 Both routes start empty: pick a **Sample size** (first 10M / 1M / 100k / 10k values; the
 backend takes it as `?size=` and returns only that many) and press **Load data**.
 Switching backend clears the loaded data. Once data is loaded, the raw values for a
-selected day/field are plotted as a line chart, but never on their own: pick a renderer with the toggle and press **Render
-graph**. Data is always passed to Plotly untouched (no downsampling):
+selected day/field are plotted as a line chart, but never on their own: pick a renderer
+with the toggle and press **Render graph**. Data is always passed to Plotly untouched (no downsampling):
 
 - **WebGL** (default) — Plotly `scattergl` lines (straight segments; Plotly's WebGL trace has
   no spline mode).
@@ -41,8 +41,8 @@ range slider, which can't draw a preview for WebGL traces: a thumbnail of the wh
 edges to zoom, or click the track to jump. It stays in sync with zooming, panning and
 double-click-reset done in the plot itself.
 
-The chart is mounted only on demand and fully released (Plotly `purge` plus dropping its d3-bound data) whenever the renderer, day, field or
-data changes; Plotly loads lazily the first time a chart is rendered. While data
+The chart is mounted only on demand and fully released (Plotly `purge` plus dropping its
+d3-bound data) whenever the renderer, day, field or data changes; Plotly loads lazily the first time a chart is rendered. While data
 downloads, a progress bar shows MB received (the backends send the uncompressed size
 in an `X-Data-Length` header). The two pages share the same `DataVisualizer`
 component, `useRootData` hook, and `Page`/`TopBar`; only the fetch function passed in

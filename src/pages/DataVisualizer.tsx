@@ -17,6 +17,7 @@ import type { DateRecord } from '@subhajitdas298/test-data-protos'
 import { useRootData } from '../api/useRootData'
 import type { FetchResult, ProgressHandler } from '../api/dataClient'
 import Page from '../components/Page'
+import type { ChartRenderer } from '../components/PlotlyChart'
 import { BACKENDS } from '../context/backends'
 import { useDataSource } from '../context/useDataSource'
 
@@ -29,11 +30,9 @@ const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1)
 // Plotly is ~1.5 MB, so it only loads when a chart is first rendered.
 const PlotlyChart = lazy(() => import('../components/PlotlyChart'))
 
-type Mode = 'webgl' | 'svg'
-
-const MODES: { mode: Mode; label: string }[] = [
-  { mode: 'webgl', label: 'WebGL' },
-  { mode: 'svg', label: 'SVG' },
+const RENDERERS: { renderer: ChartRenderer; label: string }[] = [
+  { renderer: 'webgl', label: 'WebGL' },
+  { renderer: 'svg', label: 'SVG' },
 ]
 
 const SAMPLE_SIZES = [
@@ -54,20 +53,22 @@ export default function DataVisualizer({
 }) {
   const { backend } = useDataSource()
   const baseUrl = BACKENDS[backend].baseUrl
-  const fetcher = useCallback((onProgress: ProgressHandler, size?: number) => fetchFn(baseUrl, onProgress, size),
-    [fetchFn, baseUrl],)
+  const fetcher = useCallback(
+    (onProgress: ProgressHandler, size?: number) => fetchFn(baseUrl, onProgress, size),
+    [fetchFn, baseUrl],
+  )
 
   const { root, loading, error, stats, progress, load } = useRootData(fetcher)
   const [day, setDay] = useState(0)
   const [field, setField] = useState<Field>('a')
 
-  // Asked of the backend, which returns only the first N values.
+  // Asked of the backend, which serves the matching precomputed sample.
   const [sampleSize, setSampleSize] = useState(1_000_000)
-  const [renderer, setRenderer] = useState<Mode>('webgl')
+  const [renderer, setRenderer] = useState<ChartRenderer>('webgl')
   // The chart is only mounted on demand. It is keyed per click and tied to the exact
   // values array it was started with, so a toggle, day/field change or reload
   // unmounts it (purging Plotly) instead of updating it.
-  const [shown, setShown] = useState<{ id: number; renderer: Mode; values: number[] } | null>(null)
+  const [shown, setShown] = useState<{ id: number; renderer: ChartRenderer; values: number[] } | null>(null)
 
   const days = useMemo(() => root?.data.flatMap((entry) => entry.dates) ?? [], [root])
 
@@ -189,14 +190,14 @@ export default function DataVisualizer({
           size="small"
           value={renderer}
           aria-label="Chart renderer"
-          onChange={(_, next: Mode | null) => {
+          onChange={(_, next: ChartRenderer | null) => {
             if (!next) return
             setRenderer(next)
             setShown(null)
           }}
         >
-          {MODES.map(({ mode, label }) => (
-            <ToggleButton key={mode} value={mode}>
+          {RENDERERS.map(({ renderer, label }) => (
+            <ToggleButton key={renderer} value={renderer}>
               {label}
             </ToggleButton>
           ))}
