@@ -64,31 +64,25 @@ export default function BucketChart({
       barX.push(x0, x0, x1, x1, x0, null)
       barY.push(0, count, count, 0, 0, null)
     })
+    const aX = [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE]
+    const aY = [...coarse, coarse[coarse.length - 1]]
     return [
+      // Plotly's range slider only previews SVG traces, never `scattergl`, so the filled shapes
+      // (and the legend entries) are SVG traces: the slider then previews both graphs. The WebGL
+      // traces draw the same outlines on top.
       {
-        type: 'scattergl',
+        type: 'scatter',
         mode: 'lines',
         name: `A: ${coarse.length} buckets (${coarseWidth} scores each)`,
-        x: [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE],
-        y: [...coarse, coarse[coarse.length - 1]],
+        x: aX,
+        y: aY,
         line: { color: areaColor, width: 1.5, shape: 'hv' },
         fill: 'tozeroy',
         fillcolor: alpha(areaColor, 0.3),
         hoverinfo: 'skip',
       },
       {
-        // Plotly's range slider only previews SVG traces, so A's outline is drawn once more as one:
-        // it coincides with the WebGL trace above and gives the slider its preview.
         type: 'scatter',
-        mode: 'lines',
-        x: [...coarse.map((_, i) => i * coarseWidth), MAX_SCORE],
-        y: [...coarse, coarse[coarse.length - 1]],
-        line: { color: areaColor, width: 1.5, shape: 'hv' },
-        showlegend: false,
-        hoverinfo: 'skip',
-      },
-      {
-        type: 'scattergl',
         mode: 'lines',
         name: `B: ${fine.length} buckets (${fineWidth} scores each)`,
         x: barX,
@@ -97,6 +91,25 @@ export default function BucketChart({
         yaxis: 'y2',
         fill: 'toself',
         fillcolor: alpha(barColor, 0.85),
+        hoverinfo: 'skip',
+      },
+      {
+        type: 'scattergl',
+        mode: 'lines',
+        showlegend: false,
+        x: aX,
+        y: aY,
+        line: { color: areaColor, width: 1.5, shape: 'hv' },
+        hoverinfo: 'skip',
+      },
+      {
+        type: 'scattergl',
+        mode: 'lines',
+        showlegend: false,
+        x: barX,
+        y: barY,
+        line: { color: barColor, width: 1 },
+        yaxis: 'y2',
         hoverinfo: 'skip',
       },
       {
