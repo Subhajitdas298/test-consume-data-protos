@@ -5,3 +5,10 @@ declare module 'plotly.js-gl2d-dist-min' {
   const Plotly: typeof PlotlyTypes
   export default Plotly
 }
+
+// Same for the basic bundle (scatter + bar), which the score distribution page uses.
+declare module 'plotly.js-basic-dist-min' {
+  import type * as PlotlyTypes from 'plotly.js'
+  const Plotly: typeof PlotlyTypes
+  export default Plotly
+}

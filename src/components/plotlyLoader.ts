@@ -14,3 +14,16 @@ export function loadPlotly(): Promise<PlotlyModule> {
 }
 
 export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
+
+// The basic bundle has `bar` (the gl2d one doesn't) but no WebGL traces.
+let basicPromise: Promise<PlotlyModule> | undefined
+
+export function loadBasicPlotly(): Promise<PlotlyModule> {
+  basicPromise ??= import('plotly.js-basic-dist-min')
+    .then((module) => module.default)
+    .catch((err: unknown) => {
+      basicPromise = undefined
+      throw err
+    })
+  return basicPromise
+}

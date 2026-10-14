@@ -52,16 +52,13 @@ top bar toggle and both routes.
 A third route, **Score distribution** (`/#/distribution`), fetches `GET /api/buckets` — a
 synthetic fraud-model score distribution returned as two count arrays: `a`, 10 *expected*
 counts (100 scores each), and `b`, 100 *observed* counts (10 scores each) that follow the same
-curve with some noise and some buckets above their expected value. Both are overlaid on one
-chart over scores 0 to 1000: A as shaded steps and B as thin dark-blue bars, each centred on the middle of its 10-score bucket. The right axis
-is the left one divided by ten (counts per 10 scores vs per 100), so a bar that rises above
-the step is above its expected value. Plotly's gl2d bundle has no `bar` trace, so the bars are
-drawn as filled rectangles. Hovering shows one tooltip with both series (B observed, A expected
-for the containing 100-score bucket, A per 10 scores, and B's difference from expected), the x axis
-labels every B bar with its score range, and Plotly's built-in range slider (fixed to the
-whole score range, showing both series) zooms the whole graph; whether zoomed by the slider or
-by a box drag, the y axes rescale to the visible buckets, and double-click resets. The payload is tiny, so it loads on its own and again when the
-backend is switched.
+curve with some noise and some buckets above their expected value. It is plain Plotly (the
+`plotly.js-basic-dist-min` bundle, lazy-loaded): two `bar` traces over scores 0 to 1000 — A as
+wide bars, B as thin dark-blue bars centred on their buckets on a second y axis that is the
+left one divided by ten, so a thin bar above the top of a wide one is above its expected value.
+It uses the unified hover (one tooltip with both series), a tick label per B bar, and Plotly's
+built-in range slider and box zoom; the only explicit colour is B's. The payload is tiny, so it
+loads on its own and again when the backend is switched.
 
 Since the app fetches directly from the two Azure Container Apps URLs from
 whatever origin it's hosted on, both backends have CORS enabled (`@CrossOrigin`)
